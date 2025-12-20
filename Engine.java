@@ -65,8 +65,8 @@ public class Engine extends Canvas implements Runnable{
         //Places the Camera
         handler.addObject(new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, window));
 
-        // Places cubes which are actually planes
-        handler.addObject(new Cube(new Point3D(10, 10, -8), 10, ID.Cube, handler, Color.black));
+        // Places cubes
+        handler.addObject(new Plane(new Point3D(-50, -50, -8), 100, ID.Plane, handler, Color.black));
     }
 
     //Game Loop

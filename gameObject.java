@@ -165,4 +165,8 @@ public abstract class gameObject {
 	public Quaternion getRot() {
 		return rot;
 	}
+
+    protected Color getColor() {
+        return null;
+    }
 }

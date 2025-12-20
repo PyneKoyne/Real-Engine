@@ -81,7 +81,7 @@ public class KeyInput extends KeyAdapter {
                 }
 
                 if (key == KeyEvent.VK_X){
-                    handler.addObject(new Cube(cam.getLocation().add(cam.getNorm()), 1, ID.Cube, handler, Color.yellow));
+                    handler.addObject(new Cube(cam.getLocation().add(cam.getNorm().mul(10)), 6, ID.Cube, handler, Color.yellow));
                 }
 
                 tempObject.addForce(force);

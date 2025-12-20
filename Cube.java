@@ -14,7 +14,7 @@ public class Cube extends gameObject{
     
     
     public Cube(Point3D p, float scale, ID id, Handler handler, Color color){
-        super(p, new Vector(1, 0, 0), id);
+        super(p, new Vector(0, 0, 0), id);
         this.handler = handler;
 
         Point3D[] verts = {

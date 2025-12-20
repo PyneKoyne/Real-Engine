@@ -9,6 +9,7 @@ package main;
 public enum ID {
 
     Camera,
-    Cube
+    Cube,
+    Plane
 
 }

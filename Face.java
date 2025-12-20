@@ -12,6 +12,8 @@ public class Face implements Cloneable {
 
 	// Vertices
 	public int[] verts;
+	public Vector norm;
+	public Point3D centre;
 
 	// Constructor
 	public Face(int[] verts) {
@@ -87,26 +89,36 @@ public class Face implements Cloneable {
 	public ArrayList<Point3D> drawFace(Point3D[] vertices) {
 		final double LENGTH = 0.2;
 		ArrayList<Point3D> Points = new ArrayList<Point3D>();
+		Vector x, y;
 
-		// We only care about x and y because we assume there are only two unit vectors
-		Vector unitX;
-		Vector unitY;
-		unitX = vertices[verts[0]].subtract(vertices[verts[1]]).normalize(LENGTH);
-		unitY = vertices[verts[0]].subtract(vertices[verts[verts.length - 1]]).normalize(LENGTH);
+		// Draws the two diagonals
+		Vector diagX, diagY;
+		diagX = vertices[verts[2]].subtract(vertices[verts[0]]).mul(.01);
+		diagY = vertices[verts[3]].subtract(vertices[verts[1]]).mul(.01);
 
-		double maxX = Math.max(vertices[verts[1]].subtract(vertices[verts[0]]).mag(), vertices[verts[2]].subtract(vertices[verts[0]]).mag()); // when do we stop the loop
-		double maxY = Math.max(vertices[verts[2]].subtract(vertices[verts[0]]).mag(), vertices[verts[3]].subtract(vertices[verts[0]]).mag());
-
-		int numX = 0;
-		for (double i = 0; i < 10; i += LENGTH) {
-			int numY = 0;
-			for (double j = 0; j < 10; j += LENGTH) {
-				Points.add(vertices[verts[0]].add(unitX.mul(numX)).add(unitY.mul(numY)));
-				numY ++;
+		for (int i = 0; i <= 100; i += 1) {
+			Vector line = vertices[verts[3]].add(diagY.mul(i)).subtract(vertices[verts[2]].add(diagX.mul(i)));
+			for (double j = 0; j <= line.mag(); j += LENGTH) {
+				Points.add(vertices[verts[3]].add(diagY.mul(i)).add(line.fastNormalize(j)));
 			}
-			numX++;
 		}
 
+		for (int i = 0; i <= 100; i += 1) {
+			Vector line = vertices[verts[3]].add(diagY.mul(i)).subtract(vertices[verts[0]].add(diagX.mul(-i)));
+			for (double j = 0; j < line.mag() + LENGTH / 2; j += LENGTH) {
+				Points.add(vertices[verts[3]].add(diagY.mul(i)).add(line.fastNormalize(j)));
+			}
+		}
+
+		x = vertices[verts[3]].subtract(vertices[verts[0]]).add(vertices[verts[2]].subtract(vertices[verts[1]]));
+		y = vertices[verts[3]].subtract(vertices[verts[2]]).add(vertices[verts[0]].subtract(vertices[verts[1]]));
+
+		this.norm = x.crossProd(y).normalize();
+		this.centre = new Point3D(
+				(vertices[verts[0]].x + vertices[verts[1]].x + vertices[verts[2]].x + vertices[verts[3]].x) / 4,
+				(vertices[verts[0]].y + vertices[verts[1]].y + vertices[verts[2]].y + vertices[verts[3]].y) / 4,
+				(vertices[verts[0]].z + vertices[verts[1]].z + vertices[verts[2]].z + vertices[verts[3]].z) / 4
+		);
 		return Points;
 	}
 
