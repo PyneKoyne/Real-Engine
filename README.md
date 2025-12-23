@@ -16,9 +16,7 @@ V1 has been deprecated
 - Ability to add Trigonometric Functions to output
 - Abiilty to change focal length
 
----
-
-## Changelog From V2
+### Changelog From V2
 - Removed JOCL for ease of use to build and run
   - Added back in the ability to add
 - Trigonometric Functions to the output
@@ -30,13 +28,15 @@ V1 has been deprecated
 - Added Fast Inverse Square Root
 
 ---
+## Usage
 
-## Dependencies
+### Dependencies
 - JDK version 17+ (with JFrame)
 
-## Build
+### Build
 Download the project, compile all the files, and run Main.
 
 ---
+### Notes
 
 > *Applying 1 tangent function turns the display into a planar instead of a spherical projection*
