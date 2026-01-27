@@ -2,7 +2,9 @@
 An implementation of a Stippling 3D Rendering Engine written in plain Java.
 
 
-https://github.com/user-attachments/assets/d5c15251-92c5-48c8-8fd8-ca2942a350f2
+
+https://github.com/user-attachments/assets/126372c2-8d67-46f9-be74-2aeb73d4d88c
+
 
 
 
@@ -17,7 +19,7 @@ V1 has been deprecated
 - Jumping and movement
 - Optimized CPU Rendering
 - Ability to add Trigonometric Functions to output
-- Abiilty to change focal length
+- Ability to change focal length
 
 ### Changelog From V2
 - Removed JOCL for ease of use to build and run
@@ -37,8 +39,9 @@ V1 has been deprecated
 - JDK version 17+ (with JFrame)
 
 ### Build
-Download the project, compile all the files, and run Main.
-
+Download the project, and create the main package to hold all the files.
+Then compile all the files and run Main.
+> Note: If you're using IntelliJ, remember to declare the parent folder as "Source"
 ---
 ### Notes
 
