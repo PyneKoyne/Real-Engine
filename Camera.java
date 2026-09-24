@@ -108,7 +108,7 @@ public class Camera extends gameObject {
             this.screenY = bufferedImg.getHeight() / 2.0f;
         }
 
-        Arrays.fill(pixelData, Color.lightGray.getRGB());
+        Arrays.fill(pixelData, Color.red.getRGB());
         Arrays.fill(pixelCount, (short) 0);
 
         // Loops through all objects
@@ -122,21 +122,22 @@ public class Camera extends gameObject {
 
                     // Finds the mesh
                     Point3D[] mesh = ((gameObject) tempObject).getMesh().getPoints();
+                    Integer[] color_mesh = ((gameObject) tempObject).getMesh().colour_mesh;
 
                     // Sets the colour to the colour of the object
-                    Color color = ((gameObject) tempObject).getColor();
-                    for (Point3D p : mesh) {
+                    for (int p = 0; p < mesh.length; p++) {
 
                         // Calculates where on screen the point should map to
-                        Vector camPoint = p.screenOrthoCoordinates(this, cos, tan);
+                        Vector camPoint = mesh[p].screenOrthoCoordinates(this, cos, tan);
                         if (camPoint != null) {
                             int x = (int) (camPoint.getY() + screenX);
                             int y = (int) (camPoint.getZ() + screenY);
                             if (x > 0 && x < screenX * 2 - 2 && y > 0 && y < screenY * 2 - 2) {
-                                fillRect(pixelData, x, y, color.getRGB());
-                                fillRect(pixelData, x + 1, y, color.getRGB());
-                                fillRect(pixelData, x , y + 1, color.getRGB());
-                                fillRect(pixelData, x + 1, y + 1, color.getRGB());
+                                int color = color_mesh[p];
+                                fillRect(pixelData, x, y, color);
+                                fillRect(pixelData, x + 1, y, color);
+                                fillRect(pixelData, x , y + 1, color);
+                                fillRect(pixelData, x + 1, y + 1, color);
                             }
                         }
                     }
@@ -148,18 +149,19 @@ public class Camera extends gameObject {
             try {
                 f.get();
             } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
+                return;
             }
         }
         // draws the image onscreen
         g.drawImage(bufferedImg, 0, 0, null);
-        g.setColor(Color.black);
+        g.setColor(Color.white);
 
         // Prints the focal-length on screen and number of cosines and tangents applied
-        g.drawString("Focal Length: " + focal_length, 600, 600);
-        g.drawString("Coordinates: " + coords, 600, 625);
-        g.drawString("# of Cos Applied: " + cos, 600, 650);
-        g.drawString("# of Tan Applied: " + tan, 600, 675);
+//        g.drawString("Focal Length: " + focal_length, 600, 600);
+//        g.drawString("Coordinates: " + coords, 600, 625);
+//        g.drawString("# of Cos Applied: " + cos, 600, 650);
+//        g.drawString("# of Tan Applied: " + tan, 600, 675);
 
         // Moves the mouse to the centre of the screen if not shift locked
         if (locked) {

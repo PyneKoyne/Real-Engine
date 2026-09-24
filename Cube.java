@@ -6,7 +6,9 @@
 package main;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class Cube extends gameObject{
     private final Handler handler;
@@ -42,7 +44,8 @@ public class Cube extends gameObject{
         this.mesh = new Mesh(verts, faceVerts);
         this.color = color;
         mesh.createMesh();
-        
+
+        mesh.colour_mesh = Collections.nCopies(mesh.mesh.length, color.getRGB()).toArray(new Integer[0]);
     }
 
     // changes its coordinates every tick based on its velocity
@@ -53,10 +56,4 @@ public class Cube extends gameObject{
     public void render(Graphics g) {
 
     }
-
-    // returns the color of the shape
-    public Color getColor(){
-        return color;
-    }
-
 }

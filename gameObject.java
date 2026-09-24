@@ -7,7 +7,7 @@ package main;
 
 import java.awt.*;
 
-// Abstract class to define game objects such as Camera and CUbe
+// Abstract class to define game objects such as Camera and Cube
 public abstract class gameObject {
 
 	// Default Variables
@@ -165,8 +165,4 @@ public abstract class gameObject {
 	public Quaternion getRot() {
 		return rot;
 	}
-
-    protected Color getColor() {
-        return null;
-    }
 }
