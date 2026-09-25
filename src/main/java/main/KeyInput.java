@@ -30,7 +30,7 @@ public class KeyInput extends KeyAdapter {
         // Loops through every game object
         for(int i = 0; i < handler.object.size(); i ++) {
             gameObject tempObject = handler.object.get(i);
-            if (tempObject.getid() == ID.Camera) {
+            if (tempObject.getId() == ID.Camera) {
                 Camera cam = (Camera) tempObject;
 
                 // Finds if there is any actions made
@@ -96,7 +96,7 @@ public class KeyInput extends KeyAdapter {
         for(int i = 0; i < handler.object.size(); i ++) {
             gameObject tempObject = handler.object.get(i);
             
-            if (tempObject.getid() == ID.Camera) {
+            if (tempObject.getId() == ID.Camera) {
 
                 //Key Release Events
                 if (key == KeyEvent.VK_W) {

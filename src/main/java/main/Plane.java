@@ -33,6 +33,9 @@ public class Plane extends gameObject{
         this.color = color;
         mesh.createMesh();
 
+        mesh.colour_mesh = new int[mesh.points];
+        Arrays.fill(mesh.colour_mesh, color.getRGB());
+        handler.regenerateObject(this);
     }
 
     // changes its coordinates every tick based on its velocity
@@ -41,7 +44,9 @@ public class Plane extends gameObject{
     }
 
     public void render(Graphics g) {
+    }
 
+    public void render(Graphics g, ArrayGPU[] gpu) {
     }
 
     // returns the color of the shape

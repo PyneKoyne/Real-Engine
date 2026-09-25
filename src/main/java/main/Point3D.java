@@ -147,6 +147,24 @@ public class Point3D implements Cloneable {
         return new Point3D(getX() + v.x, getY() + v.y, getZ() + v.z);
     }
 
+    // Turns a list of Point3Ds into a 1-dimensional float array
+    public static float[] toFloat(Point3D[] points){
+        float[] output = new float[points.length * 3];
+        for(int i = 0; i < points.length; i++){
+            output[i * 3] = (float) points[i].getX();
+            output[i * 3 + 1] = (float) points[i].getY();
+            output[i * 3 + 2] = (float) points[i].getZ();
+        }
+        return output;
+    }
+
+    // Turns a Point3D into a 1-dimensional float array
+    public float[] toFloat(){
+        float[] output = new float[]{(float) this.x, (float) this.y, (float) this.z};
+        return output;
+    }
+
+
     // Maps a point onto the camera
     public Vector screenOrthoCoordinates(Camera cam, int cos, int tan) {
         final double ROTATION_LIMIT = Math.PI/2.0;

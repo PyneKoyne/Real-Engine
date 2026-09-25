@@ -14,8 +14,10 @@ public class Mesh {
 	public Point3D[] vertices;
 	public Face[] faces;
 
+	public int points; // number of points within the mesh
 	public Point3D[] mesh;
-	public Integer[] colour_mesh;
+	public float[] rawMesh;
+	public int[] colour_mesh;
 
 	// Defines the mesh based on the given parameters
 	public Mesh(Point3D[] vertices, int[][] faceStructure) {
@@ -46,13 +48,26 @@ public class Mesh {
 	public void createMesh() {
 		ArrayList<Point3D> temp_mesh = new ArrayList<>();
 		for (Face face : faces) {
-			for (Point3D p : face.drawFace(vertices)) {
-				temp_mesh.add(p);
-				System.out.println(p);
-			}
+            temp_mesh.addAll(face.drawFace(vertices));
 		}
+		System.out.println(temp_mesh.get(0));
 		Point3D[] arr = new Point3D[temp_mesh.size()];
 		mesh = temp_mesh.toArray(arr);
+		points = mesh.length;
+		setRawMesh(mesh);
+		colour_mesh = new int[temp_mesh.size()];
+	}
+
+	// sets the raw mesh and points field of the object
+	public void setRawMesh(Point3D[] point_mesh) {
+		float[] rawMesh = Point3D.toFloat(point_mesh);
+		setRawMesh(rawMesh);
+	}
+
+	// sets the raw mesh and points field of the object
+	public void setRawMesh(float[] rawMesh) {
+		this.rawMesh = rawMesh;
+		this.points = rawMesh.length;
 	}
 
 	// returns the total list of points

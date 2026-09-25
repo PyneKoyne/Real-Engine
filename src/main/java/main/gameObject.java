@@ -10,15 +10,17 @@ import java.awt.*;
 // Abstract class to define game objects such as Camera and Cube
 public abstract class gameObject {
 
-	// Default Variables
-	protected Point3D coords;
-	protected Vector vel;
-	protected double roll, pitch, yaw;
-	protected Quaternion rot;
-	protected Vector norm;
-	protected Vector up;
-	protected ID id;
-	protected Mesh mesh;
+    // Default Variables for a game object
+    protected Point3D coords;
+    protected Vector vel;
+    protected double roll, pitch, yaw;
+    protected Quaternion rot;
+    protected Vector norm;
+    protected Vector up;
+    protected Vector left;
+    protected ID id;
+    protected int hash = System.identityHashCode(this);
+    protected Mesh mesh;
 
 	// Average game object constructor
 	public gameObject(Point3D cos, Vector rot, ID id) {
@@ -32,6 +34,9 @@ public abstract class gameObject {
 	public abstract void tick();
 
 	public abstract void render(Graphics g);
+
+	public abstract void render(Graphics g, ArrayGPU[] gpu);
+
 
 	// Getters and Setters
 	public void setX(double x) {
@@ -74,15 +79,21 @@ public abstract class gameObject {
 		this.id = id;
 	}
 
-	public ID getid() {
+	public ID getId() {
 		return id;
 	}
 
-	public void setVel(Vector vel) {
-		this.vel.setX(vel.getX());
-		this.vel.setY(vel.getY());
-		this.vel.setZ(vel.getZ());
-	}
+    // gets the hash of the game object
+    public int getHash() {
+        return hash;
+    }
+
+    // sets the velocity of the game object
+    public void setVel(Vector vel) {
+        this.vel.setX(vel.getX());
+        this.vel.setY(vel.getY());
+        this.vel.setZ(vel.getZ());
+    }
 
 	public void setVelX(double velX) {
 		this.vel.setX(velX);
@@ -124,19 +135,34 @@ public abstract class gameObject {
 		this.up = up;
 	}
 
-	public void setRot(Vector rot) {
-		// Rotations over 360 degrees are modul-ised
-		this.roll = rot.getX();
-		this.pitch = rot.getY();
-		this.yaw = rot.getZ();
+    // gets the left vector of the game object
+    public Vector getLeft() {
+        return left;
+    }
 
-		this.rot = new Quaternion(this.roll, this.pitch, this.yaw);
+    // sets the left vector of the game object
+    public void setLeft(Vector left) {
+        this.left = left;
+    }
+
+    // sets the rotation of the game object
+    public void setRot(Vector rot) {
+        // Rotations over 360 degrees are modul-ised
+        this.roll = rot.getX() % (2 * Math.PI);
+        this.pitch = rot.getY() % (2 * Math.PI);
+        this.yaw = rot.getZ() % (2 * Math.PI);
+
+        updateRot();
+    }
+
+    // updates the rotation of the game object
+    protected void updateRot() {
+        this.rot = new Quaternion(this.roll, this.pitch, this.yaw);
 
 		// Sets the norm when the rotation is set as well
 		this.setNorm(this.rot.rotateVector(Vector.i, false));
-
-		// Sets the up vector when the rotation vector is set
 		this.setUp(this.rot.rotateVector(Vector.k, false));
+		this.setLeft(this.rot.rotateVector(Vector.j, false));
 	}
 	
 	public void setRoll(double roll) {

@@ -23,7 +23,14 @@ public class Vector implements Cloneable {
 		this.z = z;
 	}
 
-	// Getters and Setters
+	// Constructs a vector from a float array
+	public Vector(float[] v){
+		this.x = v[0];
+		this.y = v[1];
+		this.z = v[2];
+	}
+
+	// Getters and Setters for the x y and z coordinates
 	public double getX() {
 		return x;
 	}
@@ -175,5 +182,10 @@ public class Vector implements Cloneable {
 	// Turns a Vector into a Point if the Vectors tail was at the origin
 	public Point3D toPoint() {
 		return new Point3D(getX(), getY(), getZ());
+	}
+
+	// converts a Vector into a float array
+	public float[] toFloat() {
+		return new float[]{(float) getX(), (float) getY(), (float) getZ()};
 	}
 }

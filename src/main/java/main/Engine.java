@@ -39,6 +39,11 @@ public class Engine extends Canvas implements Runnable{
     //Main Class
     public Engine(){
         handler = new Handler();
+        {
+            handler.gpu[0] = new ArrayGPU(); // sets the GPU integration of the handler
+            handler.gpu[0].startProgram(ArrayGPU.projectionSource + ArrayGPU.collapseSource); // starts the GPU program for projection
+            handler.useGPU = true;
+        }
         
         // Adds KeyInputs
         this.addKeyListener(new KeyInput(handler));
@@ -61,12 +66,15 @@ public class Engine extends Canvas implements Runnable{
         
         //Starts the Window
         window = new Window(WIDTH, HEIGHT, "Real Engine", this);
+        handler.window = window;
 
         //Places the Camera
-        handler.addObject(new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, window));
+        handler.addObject(new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler));
 
         // Places cubes
         handler.addObject(new Cube(new Point3D(-50, -50, -8), 50, ID.Cube, handler, Color.white));
+        handler.addObject(new Plane(new Point3D(-50, -50, -8), 200, ID.Plane, handler, Color.red));
+
     }
 
     //Game Loop
