@@ -198,13 +198,16 @@ public class Camera extends gameObject {
                         // Finds the mesh
                         Point3D[] mesh = ((gameObject) tempObject).getMesh().getPoints();
                         int[] color_mesh = ((gameObject) tempObject).getMesh().colour_mesh;
-                        Point3D temp_focal = tempObject.coords.subtract(this.focalPoint).toPoint();
+                        Point3D temp_focal = tempObject.rot.rotateVector(tempObject.coords.subtract(this.focalPoint), true).toPoint();
+
+                        Vector temp_norm = tempObject.rot.rotateVector(this.norm, true);
+                        Quaternion new_rot = tempObject.rot.inv().mul(this.rot);
 
                         // Sets the colour to the colour of the object
                         for (int p = 0; p < mesh.length; p++) {
 
                             // Calculates where on screen the point should map to
-                            Vector camPoint = mesh[p].screenOrthoCoordinates(this, temp_focal, cos, tan);
+                            Vector camPoint = mesh[p].screenOrthoCoordinates(focal_length, temp_norm, new_rot, temp_focal, cos, tan);
                             if (camPoint != null) {
                                 int x = (int) (camPoint.getY() + screenX);
                                 int y = (int) (camPoint.getZ() + screenY);
