@@ -23,17 +23,17 @@ public class ArrayGPU {
             "             __global int *g)" +
             "{" +
             "    int gid = get_global_id(0);" +
-            "    float x = (a[gid * 3 + 0] - b[12]);" +
-            "    float y = (a[gid * 3 + 1] - b[13]);" +
-            "    float z = (a[gid * 3 + 2] - b[14]);" +
+            "    float x = (a[gid * 3 + 0] - b[11]);" +
+            "    float y = (a[gid * 3 + 1] - b[12]);" +
+            "    float z = (a[gid * 3 + 2] - b[13]);" +
             "    float dot = mad(x, b[0], mad(y, b[1], z * b[2]));" +
             "    if (dot > 0) {" + /* only draws if the point is in front of the camera */
-            "       float angle = clamp(acos(dot * b[3] * native_rsqrt(mad(x, x, mad(y, y, z * z)))), -4.0, 4.0);" +
-            "       float con = 2.0 * mad(b[4], x, mad(b[5], y, b[6] * z));" +
-            "       float new_y = mad(b[5], con, mad(y, b[8], (mad(b[6], x, -b[4] * z)) * b[7] * 2.0));" +
-            "       float new_z = mad(b[6], con, mad(z, b[8], (mad(b[4], y, -b[5] * x)) * b[7] * 2.0));" +
-            "       float hyp = (angle * b[9] * 8192) * native_rsqrt(mad(new_y, new_y, new_z * new_z));" +
-            "       int loc = clamp(mad(round(mad(new_z, hyp, b[11])), b[10] * 2, clamp(round(mad(new_y, hyp, b[10])), 0.0, 2 * b[10])), 0.0, b[10] * b[11] * 4);" +
+            "       float angle = clamp(acos(dot * native_rsqrt(mad(x, x, mad(y, y, z * z)))), -4.0, 4.0);" +
+            "       float con = 2.0 * mad(b[3], x, mad(b[4], y, b[5] * z));" +
+            "       float new_y = mad(b[4], con, mad(y, b[7], (mad(b[5], x, -b[3] * z)) * b[6] * 2.0));" +
+            "       float new_z = mad(b[5], con, mad(z, b[7], (mad(b[3], y, -b[4] * x)) * b[6] * 2.0));" +
+            "       float hyp = (angle * b[8] * 8192) * native_rsqrt(mad(new_y, new_y, new_z * new_z));" +
+            "       int loc = clamp(mad(round(mad(new_z, hyp, b[10])), b[9] * 2, clamp(round(mad(new_y, hyp, b[9])), 0.0, 2 * b[9])), 0.0, b[9] * b[10] * 4);" +
             "       int color = c[gid];" +
             "       atomic_add(&d[loc], 1);" + /* stores the final screen location in one float */
             "       atomic_add(&e[loc], (color & 0xff0000) >> 16);" + /* stores the final screen location in one float */
@@ -136,7 +136,7 @@ public class ArrayGPU {
         this.collapse_kernel = CL.clCreateKernel(this.program, "collapseKernel", null);
         this.camMem = CL.clCreateBuffer(this.context,
                 CL.CL_MEM_READ_ONLY,
-                (long) Sizeof.cl_float * 15, null, null);
+                (long) Sizeof.cl_float * 14, null, null);
     }
 
     // Returns the OpenCL compiler log for the current program (never throws)
@@ -209,19 +209,25 @@ public class ArrayGPU {
     public void setCamMem(float[] srcArrayB){
         Pointer srcB = Pointer.to(srcArrayB);
 
-        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 0,
-                (long) 12 * Sizeof.cl_float, srcB, 0, null, null);
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 8 * Sizeof.cl_float,
+                (long) 3 * Sizeof.cl_float, srcB, 0, null, null);
     }
 
     // Executes the program based on the input received and the other stored memory objects
-    public void projectVectors(int m, float[] focal, int ids, int hash) {
+    public void projectVectors(float[] focal, float[] norm, float[] rot, int ids, int hash) {
         Pointer srcB = Pointer.to(focal);
+        Pointer srcN = Pointer.to(norm);
+        Pointer srcR = Pointer.to(rot);
 
         cl_mem[] mem = this.memObjects.get(hash);
         if(mem == null){
             return;
         }
-        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 12 * Sizeof.cl_float,
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 0,
+                (long) 3 * Sizeof.cl_float, srcN, 0, null, null);
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 3 * Sizeof.cl_float,
+                (long) 5 * Sizeof.cl_float, srcR, 0, null, null);
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 11 * Sizeof.cl_float,
                 (long) 3 * Sizeof.cl_float, srcB, 0, null, null);
 
         // Set the arguments for the kernel

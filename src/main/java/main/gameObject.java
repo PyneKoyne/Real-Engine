@@ -13,7 +13,6 @@ public abstract class gameObject {
     // Default Variables for a game object
     protected Point3D coords;
     protected Vector vel;
-    protected double roll, pitch, yaw;
     protected Quaternion rot;
     protected Vector norm;
     protected Vector up;
@@ -145,36 +144,28 @@ public abstract class gameObject {
         this.left = left;
     }
 
-    // sets the rotation of the game object
-    public void setRot(Vector rot) {
-        // Rotations over 360 degrees are modul-ised
-        this.roll = rot.getX() % (2 * Math.PI);
-        this.pitch = rot.getY() % (2 * Math.PI);
-        this.yaw = rot.getZ() % (2 * Math.PI);
+	public void setRot(Vector rot) {
+		this.rot = new Quaternion(rot.x, rot.y, rot.z);
+		updateRot();
+	}
 
+    // sets the rotation of the game object
+    public void addRot(Vector rot) {
+        // Rotations over 360 degrees are modul-ised
+        Quaternion roll = new Quaternion(rot.getX(), this.norm);
+        Quaternion pitch = new Quaternion(rot.getY(), this.left);
+        Quaternion yaw = new Quaternion(rot.getZ(), this.up);
+
+		this.rot = yaw.mul(this.rot.mul(pitch).mul(roll)).normalize();
         updateRot();
     }
 
     // updates the rotation of the game object
     protected void updateRot() {
-        this.rot = new Quaternion(this.roll, this.pitch, this.yaw);
-
 		// Sets the norm when the rotation is set as well
 		this.setNorm(this.rot.rotateVector(Vector.i, false));
 		this.setUp(this.rot.rotateVector(Vector.k, false));
 		this.setLeft(this.rot.rotateVector(Vector.j, false));
-	}
-	
-	public void setRoll(double roll) {
-		this.roll = roll;
-	}
-	
-	public void setPitch(double pitch) {
-		this.pitch = pitch;
-	}
-	
-	public void setYaw(double yaw) {
-		this.yaw = yaw;
 	}
 
 	// adds acceleration
@@ -182,10 +173,6 @@ public abstract class gameObject {
 		setVelX(getVelX() + force.getX());
 		setVelY(getVelY() + force.getY());
 		setVelZ(getVelZ() + force.getZ());
-	}
-	
-	public Vector getAngles() {
-		return new Vector(this.roll, this.pitch, this.yaw);
 	}
 
 	public Quaternion getRot() {

@@ -30,7 +30,6 @@ public class Camera extends gameObject {
     public int tan = 0;
     private volatile float screenX, screenY;
     public Point3D focalPoint = Point3D.zero;
-    public boolean sceneChanged = true;
     private BufferedImage bufferedImg;     // image creation
     private volatile int[] pixelData;
     private volatile short[] pixelCount;
@@ -39,10 +38,12 @@ public class Camera extends gameObject {
 
     private float[] cameraMemory;
     private Robot robot;
-
+    private double yaw, pitch;
 
     public Camera(Point3D coords, double focal, ID id, Handler handler) {
         super(coords, new Vector(0, 0, 0), id);
+        this.yaw = 0;
+        this.pitch = 0;
         this.focal_length = focal;
         this.handler = handler;
         this.useGPU = handler.useGPU;
@@ -51,15 +52,6 @@ public class Camera extends gameObject {
         this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
         this.screenY = bufferedImg.getHeight() / 2.0f;
         cameraMemory = new float[]{
-                (float) this.norm.x,
-                (float) this.norm.y,
-                (float) this.norm.z,
-                (float) (1.0f/norm.mag()),
-                (float) ((-1) * this.rot.x),
-                (float) ((-1) * this.rot.y),
-                (float) ((-1) * this.rot.z),
-                (float) this.rot.w,
-                (float) (this.rot.w * this.rot.w - (this.rot.x * this.rot.x + this.rot.y * this.rot.y + this.rot.z * this.rot.z)),
                 (float) this.focal_length,
                 screenX,
                 screenY
@@ -80,28 +72,27 @@ public class Camera extends gameObject {
     // Moves every tick
     public void tick() {
         coords = coords.add(vel.mul(1));
+        // Moves the mouse to the centre of the screen if not shift locked
+        if (locked) {
+            // Finds the difference in mouse coordinates
+            Point p = MouseInfo.getPointerInfo().getLocation();
+            addRot(new Vector(0, (screenY - p.getY() + window.screenLoc().y) / 1000, (screenX - p.getX() + window.screenLoc().x) / 1000));
+            robot.mouseMove((int) (screenX + window.screenLoc().x), (int) (screenY + window.screenLoc().y));
+        }
+
         float[] tempMemory;
         Point3D tempFocal;
         tempMemory = new float[]{
-                (float) this.norm.x,
-                (float) this.norm.y,
-                (float) this.norm.z,
-                (float) (1/norm.mag()),
-                (float) ((-1) * this.rot.x),
-                (float) ((-1) * this.rot.y),
-                (float) ((-1) * this.rot.z),
-                (float) this.rot.w,
-                (float) (this.rot.w * this.rot.w - (this.rot.x * this.rot.x + this.rot.y * this.rot.y + this.rot.z * this.rot.z)),
                 (float) this.focal_length,
                 screenX,
                 screenY
         };
 
-        sceneChanged = !Arrays.equals(tempMemory, cameraMemory);
+        handler.sceneChanged = !Arrays.equals(tempMemory, cameraMemory);
         cameraMemory = tempMemory;
         tempFocal = this.coords.add(norm.mul(this.focal_length)); // sets the focal point as the coordinates of the camera plus the normal multiplied by the length
         if (!tempFocal.equals(this.focalPoint)) {
-            sceneChanged = true;
+            handler.sceneChanged = true;
             this.focalPoint = tempFocal;
         }
 
@@ -113,21 +104,10 @@ public class Camera extends gameObject {
         }
 
         focal_vel /= 4;
-
-        // Moves the mouse to the centre of the screen if not shift locked
-        if (locked) {
-            // Finds the difference in mouse coordinates
-            Point p = MouseInfo.getPointerInfo().getLocation();
-            setRot(getAngles().add(new Vector(0, (screenY - p.getY() + window.screenLoc().y) / 1000, (screenX - p.getX() + window.screenLoc().x) / 1000)));
-            robot.mouseMove((int) (screenX + window.screenLoc().x), (int) (screenY + window.screenLoc().y));
-        }
     }
 
     // Renders the screen
     public void render(Graphics gParent, ArrayGPU[] gpu) {
-
-        ArrayList<Future<String>> renders = new ArrayList<>();
-
         // if the screen size has changed, creates a new canvas
         if (bufferedImg.getHeight() != window.getHeight() || bufferedImg.getWidth() != window.getWidth()) {
             bufferedImg = CONFIG.createCompatibleImage(window.getWidth(), window.getHeight());
@@ -135,11 +115,11 @@ public class Camera extends gameObject {
             pixelCount = new short[pixelData.length];
             this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
             this.screenY = bufferedImg.getHeight() / 2.0f;
-            sceneChanged = false; // waits until next tick
+            handler.sceneChanged = false; // waits until next tick
             gpu[0].setPixelData(window.getWidth(), window.getHeight());
         }
 
-        if (sceneChanged) { // only renders if the scene has changed
+        if (handler.sceneChanged) { // only renders if the scene has changed
             gpu[0].clearScreen(window.getHeight() * window.getWidth());
             gpu[0].setCamMem(cameraMemory); // sets variables required for computing the screen location of the point in the GPU
 
@@ -150,13 +130,22 @@ public class Camera extends gameObject {
                 // If the object is a cube, it renders it
                 if (tempObject.getId() != ID.Camera) {
 
-//                    Vector tempFocal = tempObject.coords.subtract(this.getFocalPoint());
-//                    if (tempFocal.dotProd(norm) > 0.2) { // if the object is behind the user, it doesn't render
-//                        continue;
-//                    }
+                    Vector tempFocal = tempObject.coords.subtract(this.focalPoint);
+                    if (tempFocal.dotProd(norm) > 0.2) { // if the object is behind the user, it doesn't render
+                        continue;
+                    }
 
-                    float[] focal = this.getFocalPoint().toFloat();
-                    gpu[0].projectVectors(window.getWidth() * window.getHeight(), focal, tempObject.getMesh().points / 3, tempObject.getHash()); // grabs the screen locations of all the points by sending a script to the GPU
+                    Vector temp_norm = tempObject.rot.rotateVector(this.norm, true);
+                    float[] focal = tempObject.rot.rotateVector(tempFocal, true).toFloat(); // finds the focal point of the object in the object's local coordinates
+                    Quaternion new_rot = tempObject.rot.inv().mul(this.rot);
+                    float[] rot_mem = new float[]{
+                            (float) ((-1) * new_rot.x),
+                            (float) ((-1) * new_rot.y),
+                            (float) ((-1) * new_rot.z),
+                            (float) new_rot.w,
+                            (float) (new_rot.w * new_rot.w - (new_rot.x * new_rot.x + new_rot.y * new_rot.y + new_rot.z * new_rot.z)),
+                    };
+                    gpu[0].projectVectors(focal, temp_norm.toFloat(), rot_mem, tempObject.getMesh().points / 3, tempObject.getHash()); // grabs the screen locations of all the points by sending a script to the GPU
                 }
             }
             try {
@@ -191,9 +180,9 @@ public class Camera extends gameObject {
             pixelCount = new short[pixelData.length];
             this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
             this.screenY = bufferedImg.getHeight() / 2.0f;
-            sceneChanged = false; // waits until next tick
+            handler.sceneChanged = false; // waits until next tick
         }
-        if (sceneChanged) { // only renders if the scene has changed
+        if (handler.sceneChanged) { // only renders if the scene has changed
             Arrays.fill(pixelData, Color.red.getRGB());
             Arrays.fill(pixelCount, (short) 0);
 
@@ -209,12 +198,13 @@ public class Camera extends gameObject {
                         // Finds the mesh
                         Point3D[] mesh = ((gameObject) tempObject).getMesh().getPoints();
                         int[] color_mesh = ((gameObject) tempObject).getMesh().colour_mesh;
+                        Point3D temp_focal = tempObject.coords.subtract(this.focalPoint).toPoint();
 
                         // Sets the colour to the colour of the object
                         for (int p = 0; p < mesh.length; p++) {
 
                             // Calculates where on screen the point should map to
-                            Vector camPoint = mesh[p].screenOrthoCoordinates(this, cos, tan);
+                            Vector camPoint = mesh[p].screenOrthoCoordinates(this, temp_focal, cos, tan);
                             if (camPoint != null) {
                                 int x = (int) (camPoint.getY() + screenX);
                                 int y = (int) (camPoint.getZ() + screenY);
@@ -251,6 +241,14 @@ public class Camera extends gameObject {
 //        g.drawString("# of Tan Applied: " + tan, 600, 675);
     }
 
+    @Override
+    public void addRot(Vector rot) {
+        this.yaw = (this.yaw + rot.z) % (2 * Math.PI);
+        this.pitch = (this.pitch + rot.y) % (2 * Math.PI);
+        this.rot = new Quaternion(0, this.pitch, this.yaw);
+        this.updateRot();
+    }
+
     // fills a one by two rectangle on the image
     private void fillRect(int[] pixelData, int x, int y, int color) {
         float ratio = (float) ((pixelCount[x + y * this.window.getWidth()] + 1.0) / (pixelCount[x + y * this.window.getWidth()] + 2.0));
@@ -265,10 +263,6 @@ public class Camera extends gameObject {
     // Sets Focal Length Change Rate
     public void setFocalVel(double vel) {
         focal_vel = vel;
-    }
-
-    public Point3D getFocalPoint() {
-        return focalPoint;
     }
 
     // Sets the number of cosines applied in the projection

@@ -8,12 +8,19 @@ package main;
 public class Quaternion implements Cloneable {
 	public double w, x, y, z;
 
-	// Constructs a normal Quaternion
-	public Quaternion(double theta, double x, double y, double z) {
-		this.w = Math.cos(theta/2.0);
-		this.x = x * Math.sin(theta/2.0);
-		this.y = y * Math.sin(theta/2.0);
-		this.z = z * Math.sin(theta/2.0);
+	// Constructs an angle Quaternion
+//	public Quaternion(double theta, double x, double y, double z) {
+//		this.w = Math.cos(theta/2.0);
+//		this.x = x * Math.sin(theta/2.0);
+//		this.y = y * Math.sin(theta/2.0);
+//		this.z = z * Math.sin(theta/2.0);
+//	}
+
+	public Quaternion(double w, double x, double y, double z) {
+		this.w = w;
+		this.x = x;
+		this.y = y;
+		this.z = z;
 	}
 
 	// Constructs a Quaternion from an angle and a Vector
@@ -37,7 +44,7 @@ public class Quaternion implements Cloneable {
 	{
 		Quaternion q = new Quaternion(angles.getX(), angles.getY(), angles.getZ());
 		if (inv){
-			q.inv();
+			q = q.inv();
 		}
 
 		return rotateVector(q, v);
@@ -84,16 +91,13 @@ public class Quaternion implements Cloneable {
 
 	// returns the inverse of the Quaternion
 	public Quaternion inv() {
-		this.x = -this.x;
-		this.y = -this.y;
-		this.z = -this.z;
-		return this;
+		return new Quaternion(this.w, -this.x, -this.y, -this.z).normalize();
 	}
 
 	// Rotates a point based on a Quaternion
-	public Point3D rotatePoint(Quaternion rot, Point3D point) {
+	public Point3D rotatePoint(Point3D point) {
 		Quaternion quatPoint = new Quaternion(0, point.getX(), point.getY(), point.getZ());
-		Quaternion pPrime = rot.inv().mul(quatPoint).mul(rot);
+		Quaternion pPrime = this.inv().mul(quatPoint).mul(this);
 		return new Point3D(pPrime.x, pPrime.y, pPrime.z);
 	}
 
@@ -165,9 +169,9 @@ public class Quaternion implements Cloneable {
 	// Multiples a Quaternion with another Quaternion
 	public Quaternion mul(Quaternion q) {
 		double p0 = w * q.w - x * q.x - y * q.y - z * q.z;
-		double p1 = w * q.x + x * q.w - y * q.z + z * q.y;
-		double p2 = w * q.y + x * q.z + y * q.w - z * q.x;
-		double p3 = w * q.z - x * q.y + y * q.x + z * q.w;
+		double p1 = w * q.x + x * q.w + y * q.z - z * q.y;
+		double p2 = w * q.y - x * q.z + y * q.w + z * q.x;
+		double p3 = w * q.z + x * q.y - y * q.x + z * q.w;
 		return new Quaternion(p0, p1, p2, p3);
 	}
 }

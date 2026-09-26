@@ -13,22 +13,21 @@ import java.util.Collections;
 public class Cube extends gameObject{
     private final Handler handler;
     private final Color color;
-    
-    
+
     public Cube(Point3D p, float scale, ID id, Handler handler, Color color){
         super(p, new Vector(0, 0, 0), id);
         this.handler = handler;
 
         Point3D[] verts = {
-                p,
-                p.add(new Vector(scale, 0, 0)),
-                p.add(new Vector(0, scale, 0)),
-                p.add(new Vector(scale, scale, 0)),
+                Point3D.zero,
+                new Point3D(scale, 0, 0),
+                new Point3D(0, scale, 0),
+                new Point3D(scale, scale, 0),
 
-                p.add(new Vector(0, 0, scale)),
-                p.add(new Vector(scale, 0, scale)),
-                p.add(new Vector(0, scale, scale)),
-                p.add(new Vector(scale, scale, scale))
+                new Point3D(0, 0, scale),
+                new Point3D(scale, 0, scale),
+                new Point3D(0, scale, scale),
+                new Point3D(scale, scale, scale)
         };
         System.out.println(Arrays.toString(verts));
         int[][] faceVerts = new int[][]
@@ -52,7 +51,9 @@ public class Cube extends gameObject{
 
     // changes its coordinates every tick based on its velocity
     public void tick() {
-        coords.add(vel);
+        coords = coords.add(vel);
+        addRot(new Vector(0.1, 0.1, 0));
+        handler.sceneChanged = true;
     }
 
     public void render(Graphics g) {

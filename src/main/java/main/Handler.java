@@ -15,6 +15,7 @@ public class Handler {
     public ArrayGPU[] gpu = new ArrayGPU[3]; // gpu rendering accessible for the game objects
     public boolean useGPU = false;
     public Window window;
+    public boolean sceneChanged = true;
 
     // Ticks and renders every game object
     public void tick(){
@@ -50,24 +51,13 @@ public class Handler {
             gpu[0].unallocateMemory(object.getHash());
             gpu[0].allocateMemory(tempMesh.points, tempMesh.rawMesh, tempMesh.colour_mesh, object.getHash());
         }
-        changeScene();
+        this.sceneChanged = true;
     }
 
     //Removes a gameObject from the list
     public void removeObject(gameObject object){
         this.object.remove(object);
         gpu[0].unallocateMemory(object.getHash());
-        changeScene();
-    }
-
-    // Tells any camera objects that the scene has changed
-    private void changeScene(){
-        for(int i = 0; i < object.size(); i ++) {
-            gameObject tempObject = object.get(i);
-            if (tempObject.getId() == ID.Camera){
-                Camera c = (Camera) tempObject;
-                c.sceneChanged = true;
-            }
-        }
+        this.sceneChanged = true;
     }
 }

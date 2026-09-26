@@ -164,13 +164,11 @@ public class Point3D implements Cloneable {
         return output;
     }
 
-
     // Maps a point onto the camera
-    public Vector screenOrthoCoordinates(Camera cam, int cos, int tan) {
+    public Vector screenOrthoCoordinates(Camera cam, Point3D focalPoint, int cos, int tan) {
         final double ROTATION_LIMIT = Math.PI/2.0;
         double focalLength = cam.getFocalLength();
         Vector norm = cam.getNorm();
-        Point3D focalPoint = cam.getFocalPoint();
         Vector vector2cam = focalPoint.subtract(this);
 
         double angle = vector2cam.diffAngles(norm);
