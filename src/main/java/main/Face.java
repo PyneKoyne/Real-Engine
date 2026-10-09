@@ -86,8 +86,7 @@ public class Face implements Cloneable {
 
 	// Draw all points within a face given vertices
 	// Currently only draws Quats
-	public ArrayList<Point3D> drawFace(Point3D[] vertices) {
-		final double LENGTH = 0.2;
+	public ArrayList<Point3D> drawFace(Point3D[] vertices, double LENGTH) {
 		ArrayList<Point3D> Points = new ArrayList<Point3D>();
 		Vector x, y;
 

@@ -12,6 +12,8 @@ public abstract class gameObject {
 
     // Default Variables for a game object
     protected Point3D coords;
+	protected double bounds;
+	protected double scale;
     protected Vector vel;
     protected Quaternion rot;
     protected Vector norm;
@@ -22,11 +24,13 @@ public abstract class gameObject {
     protected Mesh mesh;
 
 	// Average game object constructor
-	public gameObject(Point3D cos, Vector rot, ID id) {
+	public gameObject(Point3D cos, Vector rot, double scale, ID id) {
 		setRot(rot);
 		coords = cos;
 		this.vel = new Vector(0, 0, 0);
 		this.id = id;
+		bounds = 0.1;
+		this.scale = scale;
 	}
 
 	// requires a tick and render method in every game object
@@ -38,6 +42,10 @@ public abstract class gameObject {
 
 
 	// Getters and Setters
+	public void setScale(double scale) { this.scale = scale; }
+
+	public double getScale() { return scale; }
+
 	public void setX(double x) {
 		this.coords.setX(x);
 	}

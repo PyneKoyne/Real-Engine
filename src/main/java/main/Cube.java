@@ -6,28 +6,26 @@
 package main;
 
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 
 public class Cube extends gameObject{
     private final Handler handler;
     private final Color color;
 
-    public Cube(Point3D p, float scale, ID id, Handler handler, Color color){
-        super(p, new Vector(0, 0, 0), id);
+    public Cube(Point3D p, Vector rot, float scale, ID id, Handler handler, Color color){
+        super(p, rot, scale, id);
         this.handler = handler;
 
         Point3D[] verts = {
-                Point3D.zero,
-                new Point3D(scale, 0, 0),
-                new Point3D(0, scale, 0),
-                new Point3D(scale, scale, 0),
+                new Point3D((double) -1 /2, (double)-1/2, (double) -1/2),
+                new Point3D((double) 1/2, (double) -1/2, (double) -1/2),
+                new Point3D((double) -1/2, (double) 1/2, (double) -1/2),
+                new Point3D((double) 1/2, (double) 1/2, (double) -1/2),
 
-                new Point3D(0, 0, scale),
-                new Point3D(scale, 0, scale),
-                new Point3D(0, scale, scale),
-                new Point3D(scale, scale, scale)
+                new Point3D((double) -1/2, (double) -1/2, (double) 1/2),
+                new Point3D((double) 1/2, (double) -1/2, (double) 1/2),
+                new Point3D((double) -1/2, (double) 1/2, (double) 1/2),
+                new Point3D((double) 1/2, (double) 1/2, (double) 1/2)
         };
         System.out.println(Arrays.toString(verts));
         int[][] faceVerts = new int[][]
@@ -40,9 +38,10 @@ public class Cube extends gameObject{
                         {5, 7, 3, 1}
                 };
 
+        this.bounds = scale / 1.732;
         this.mesh = new Mesh(verts, faceVerts);
         this.color = color;
-        mesh.createMesh();
+        mesh.createMesh(0.01);
 
         mesh.colour_mesh = new int[mesh.points];
         Arrays.fill(mesh.colour_mesh, color.getRGB());
@@ -52,7 +51,7 @@ public class Cube extends gameObject{
     // changes its coordinates every tick based on its velocity
     public void tick() {
         coords = coords.add(vel);
-        addRot(new Vector(0.1, 0.1, 0));
+        addRot(new Vector(0.02, 0, 0));
         handler.sceneChanged = true;
     }
 

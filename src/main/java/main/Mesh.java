@@ -45,10 +45,10 @@ public class Mesh {
 	}
 
 	// Creates the total mesh by drawing each face
-	public void createMesh() {
+	public void createMesh(double density) {
 		ArrayList<Point3D> temp_mesh = new ArrayList<>();
 		for (Face face : faces) {
-            temp_mesh.addAll(face.drawFace(vertices));
+            temp_mesh.addAll(face.drawFace(vertices, density));
 		}
 		System.out.println(temp_mesh.get(0));
 		Point3D[] arr = new Point3D[temp_mesh.size()];

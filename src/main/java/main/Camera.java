@@ -14,6 +14,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static main.Rendering.blendColor;
 
@@ -25,9 +27,9 @@ public class Camera extends gameObject {
     public double size;
     public double focal_vel;
     public boolean locked = true;
-    public boolean useGPU;
     public int cos = 0;
     public int tan = 0;
+    public Rendering output;
     private volatile float screenX, screenY;
     public Point3D focalPoint = Point3D.zero;
     private BufferedImage bufferedImg;     // image creation
@@ -40,19 +42,18 @@ public class Camera extends gameObject {
     private Robot robot;
     private double yaw, pitch;
 
-    public Camera(Point3D coords, double focal, ID id, Handler handler) {
-        super(coords, new Vector(0, 0, 0), id);
+    public Camera(Point3D coords, double focal, ID id, Handler handler, Rendering renderer) {
+        super(coords, new Vector(0, 0, 0), 1, id);
         this.yaw = 0;
         this.pitch = 0;
         this.focal_length = focal;
         this.handler = handler;
-        this.useGPU = handler.useGPU;
+        boolean useGPU = handler.useGPU;
         this.window = handler.window;
         bufferedImg = CONFIG.createCompatibleImage(window.getWidth(), window.getHeight());
         this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
         this.screenY = bufferedImg.getHeight() / 2.0f;
         cameraMemory = new float[]{
-                (float) this.focal_length,
                 screenX,
                 screenY
         };
@@ -67,6 +68,11 @@ public class Camera extends gameObject {
         if (useGPU) {
             handler.gpu[0].setPixelData(window.getWidth(), window.getHeight());
         }
+        if (renderer != null) {
+            output = renderer;
+            Thread thread = new Thread(output);
+            thread.start();
+        }
     }
 
     // Moves every tick
@@ -76,24 +82,16 @@ public class Camera extends gameObject {
         if (locked) {
             // Finds the difference in mouse coordinates
             Point p = MouseInfo.getPointerInfo().getLocation();
-            addRot(new Vector(0, (screenY - p.getY() + window.screenLoc().y) / 1000, (screenX - p.getX() + window.screenLoc().x) / 1000));
-            robot.mouseMove((int) (screenX + window.screenLoc().x), (int) (screenY + window.screenLoc().y));
+            Point centre = window.centre();
+            addRot(new Vector(0, (centre.y - p.getY()) / 1000, (centre.x - p.getX()) / 1000));
+            robot.mouseMove((int) (centre.x), (int) (centre.y));
         }
 
-        float[] tempMemory;
-        Point3D tempFocal;
-        tempMemory = new float[]{
-                (float) this.focal_length,
-                screenX,
-                screenY
-        };
-
-        handler.sceneChanged = !Arrays.equals(tempMemory, cameraMemory);
-        cameraMemory = tempMemory;
-        tempFocal = this.coords.add(norm.mul(this.focal_length)); // sets the focal point as the coordinates of the camera plus the normal multiplied by the length
-        if (!tempFocal.equals(this.focalPoint)) {
+        Point3D objFocal;
+        objFocal = this.coords.add(norm.mul(this.focal_length)); // sets the focal point as the coordinates of the camera plus the normal multiplied by the length
+        if (!objFocal.equals(this.focalPoint)) {
             handler.sceneChanged = true;
-            this.focalPoint = tempFocal;
+            this.focalPoint = objFocal;
         }
 
         // Changes the focal length based on the focal length velocity
@@ -104,23 +102,33 @@ public class Camera extends gameObject {
         }
 
         focal_vel /= 4;
+
+        if (output != null) {
+            output.renderFrame(pixelData);
+        }
     }
 
     // Renders the screen
     public void render(Graphics gParent, ArrayGPU[] gpu) {
+        int height = window.getHeight();
+        int width  = window.getWidth();
         // if the screen size has changed, creates a new canvas
-        if (bufferedImg.getHeight() != window.getHeight() || bufferedImg.getWidth() != window.getWidth()) {
-            bufferedImg = CONFIG.createCompatibleImage(window.getWidth(), window.getHeight());
+        if (bufferedImg.getHeight() != height || bufferedImg.getWidth() != width) {
+            bufferedImg = CONFIG.createCompatibleImage(width, height);
             pixelData = ((DataBufferInt) bufferedImg.getRaster().getDataBuffer()).getData();
             pixelCount = new short[pixelData.length];
             this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
             this.screenY = bufferedImg.getHeight() / 2.0f;
             handler.sceneChanged = false; // waits until next tick
-            gpu[0].setPixelData(window.getWidth(), window.getHeight());
+            gpu[0].setPixelData(width, height);
+            cameraMemory = new float[]{
+                    screenX,
+                    screenY
+            };
         }
 
-        if (handler.sceneChanged) { // only renders if the scene has changed
-            gpu[0].clearScreen(window.getHeight() * window.getWidth());
+        else if (handler.sceneChanged) { // only renders if the scene has changed
+            gpu[0].clearScreen(height * width);
             gpu[0].setCamMem(cameraMemory); // sets variables required for computing the screen location of the point in the GPU
 
             // Loops through all objects
@@ -130,13 +138,14 @@ public class Camera extends gameObject {
                 // If the object is a cube, it renders it
                 if (tempObject.getId() != ID.Camera) {
 
-                    Vector tempFocal = tempObject.coords.subtract(this.focalPoint);
-                    if (tempFocal.dotProd(norm) > 0.2) { // if the object is behind the user, it doesn't render
+                    Vector objFocal = tempObject.coords.subtract(this.focalPoint);
+                    double scale = tempObject.getScale();
+                    if (objFocal.dotProd(norm) > tempObject.bounds * 1.1) { // if the object is behind the user, it doesn't render
                         continue;
                     }
 
                     Vector temp_norm = tempObject.rot.rotateVector(this.norm, true);
-                    float[] focal = tempObject.rot.rotateVector(tempFocal, true).toFloat(); // finds the focal point of the object in the object's local coordinates
+                    float[] focal = tempObject.rot.rotateVector(objFocal, true).mul(1.0/scale).toFloat(); // finds the focal point of the object in the object's local coordinates
                     Quaternion new_rot = tempObject.rot.inv().mul(this.rot);
                     float[] rot_mem = new float[]{
                             (float) ((-1) * new_rot.x),
@@ -145,11 +154,11 @@ public class Camera extends gameObject {
                             (float) new_rot.w,
                             (float) (new_rot.w * new_rot.w - (new_rot.x * new_rot.x + new_rot.y * new_rot.y + new_rot.z * new_rot.z)),
                     };
-                    gpu[0].projectVectors(focal, temp_norm.toFloat(), rot_mem, tempObject.getMesh().points / 3, tempObject.getHash()); // grabs the screen locations of all the points by sending a script to the GPU
+                    gpu[0].projectVectors((float) (focal_length), focal, temp_norm.toFloat(), rot_mem, tempObject.getMesh().points / 3, tempObject.getHash()); // grabs the screen locations of all the points by sending a script to the GPU
                 }
             }
             try {
-                gpu[0].collapseColours(window.getHeight() * window.getWidth(), Color.lightGray.getRGB(), pixelData); // collapses the colours of all points onto the screen
+                gpu[0].collapseColours(height * width, Color.lightGray.getRGB(), pixelData); // collapses the colours of all points onto the screen
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -189,16 +198,18 @@ public class Camera extends gameObject {
             // Loops through all objects
             for (int i = 0; i < handler.object.size(); i++) {
                 gameObject tempObject = handler.object.get(i);
+                Vector objFocal = tempObject.coords.subtract(this.focalPoint);
+                if (objFocal.dotProd(norm) > tempObject.bounds * 1.1) { // if the object is behind the user, it doesn't render
+                    continue;
+                }
 
                 // If the object is a cube, it renders it
                 if (tempObject.getId() != ID.Camera) {
-
-                    renders.add((Future<String>) executor.submit(new Thread(() -> {
+                    Future<?> render = executor.submit(new Thread(() -> {
 
                         // Finds the mesh
                         Point3D[] mesh = ((gameObject) tempObject).getMesh().getPoints();
                         int[] color_mesh = ((gameObject) tempObject).getMesh().colour_mesh;
-                        Point3D temp_focal = tempObject.rot.rotateVector(tempObject.coords.subtract(this.focalPoint), true).toPoint();
 
                         Vector temp_norm = tempObject.rot.rotateVector(this.norm, true);
                         Quaternion new_rot = tempObject.rot.inv().mul(this.rot);
@@ -207,7 +218,7 @@ public class Camera extends gameObject {
                         for (int p = 0; p < mesh.length; p++) {
 
                             // Calculates where on screen the point should map to
-                            Vector camPoint = mesh[p].screenOrthoCoordinates(focal_length, temp_norm, new_rot, temp_focal, cos, tan);
+                            Vector camPoint = mesh[p].screenOrthoCoordinates(focal_length, temp_norm, new_rot, tempObject.rot.rotateVector(objFocal, true).mul(1/tempObject.getScale()).toPoint(), cos, tan);
                             if (camPoint != null) {
                                 int x = (int) (camPoint.getY() + screenX);
                                 int y = (int) (camPoint.getZ() + screenY);
@@ -220,7 +231,8 @@ public class Camera extends gameObject {
                                 }
                             }
                         }
-                    })));
+                    }));
+                    renders.add((Future<String>) render);
                 }
             }
             // waits for all objects to be rendered
@@ -238,10 +250,10 @@ public class Camera extends gameObject {
         g.setColor(Color.white);
 
         // Prints the focal-length on screen and number of cosines and tangents applied
-//        g.drawString("Focal Length: " + focal_length, 600, 600);
-//        g.drawString("Coordinates: " + coords, 600, 625);
-//        g.drawString("# of Cos Applied: " + cos, 600, 650);
-//        g.drawString("# of Tan Applied: " + tan, 600, 675);
+        g.drawString("Focal Length: " + focal_length, 600, 600);
+        g.drawString("Coordinates: " + coords, 600, 625);
+        g.drawString("# of Cos Applied: " + cos, 600, 650);
+        g.drawString("# of Tan Applied: " + tan, 600, 675);
     }
 
     @Override

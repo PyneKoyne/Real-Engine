@@ -68,15 +68,8 @@ public class Engine extends Canvas implements Runnable{
         window = new Window(WIDTH, HEIGHT, "Real Engine", this);
         handler.window = window;
 
-        //Places the Camera
-        handler.addObject(new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler));
-
-//        // Places cubes
-        Cube c = (new Cube(new Point3D(-50, -50, -8), 50, ID.Cube, handler, Color.white));
-        c.setVel(new Vector(0.1, 0.1, 0));
-        handler.addObject(c);
-        handler.addObject(new Plane(new Point3D(-50, -50, -8), 200, ID.Plane, handler, Color.red));
-
+        Scene scene = new Scene(handler);
+        scene.testScene();
     }
 
     //Game Loop

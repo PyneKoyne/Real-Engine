@@ -6,7 +6,6 @@
 package main;
 
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Plane extends gameObject{
@@ -14,14 +13,14 @@ public class Plane extends gameObject{
     private final Color color;
 
 
-    public Plane(Point3D p, float scale, ID id, Handler handler, Color color){
-        super(p, new Vector(0, 0, 0), id);
+    public Plane(Point3D p, Vector rot, float scale, ID id, Handler handler, Color color){
+        super(p, rot, scale, id);
         this.handler = handler;
         Point3D[] verts = {
-                Point3D.zero,
-                new Point3D(scale, 0, 0),
-                new Point3D(0, scale, 0),
-                new Point3D(scale, scale, 0),
+                new Point3D((double) -1 /2, (double) -1/2, 0),
+                new Point3D((double) 1/2, (double) -1/2, 0),
+                new Point3D((double) -1/2, (double) 1/2, 0),
+                new Point3D((double) 1/2, (double) 1/2, 0),
         };
         System.out.println(Arrays.toString(verts));
         int[][] faceVerts = new int[][]
@@ -29,9 +28,10 @@ public class Plane extends gameObject{
                         {0, 1, 3, 2},
                 };
 
+        this.bounds = scale/1.414;
         this.mesh = new Mesh(verts, faceVerts);
         this.color = color;
-        mesh.createMesh();
+        mesh.createMesh(0.001);
 
         mesh.colour_mesh = new int[mesh.points];
         Arrays.fill(mesh.colour_mesh, color.getRGB());

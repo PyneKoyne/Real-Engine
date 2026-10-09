@@ -200,7 +200,6 @@ public class ArrayGPU {
             cl_mem[] mem = memObjects.get(hash);
             CL.clReleaseMemObject(mem[0]);
             CL.clReleaseMemObject(mem[1]);
-            CL.clReleaseMemObject(camMem);
             memObjects.remove(hash);
         }
     }
@@ -209,12 +208,13 @@ public class ArrayGPU {
     public void setCamMem(float[] srcArrayB){
         Pointer srcB = Pointer.to(srcArrayB);
 
-        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 8 * Sizeof.cl_float,
-                (long) 3 * Sizeof.cl_float, srcB, 0, null, null);
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 9 * Sizeof.cl_float,
+                (long) 2 * Sizeof.cl_float, srcB, 0, null, null);
     }
 
     // Executes the program based on the input received and the other stored memory objects
-    public void projectVectors(float[] focal, float[] norm, float[] rot, int ids, int hash) {
+    public void projectVectors(float focal_length, float[] focal, float[] norm, float[] rot, int ids, int hash) {
+        Pointer srcA = Pointer.to(new float[]{focal_length});
         Pointer srcB = Pointer.to(focal);
         Pointer srcN = Pointer.to(norm);
         Pointer srcR = Pointer.to(rot);
@@ -227,6 +227,8 @@ public class ArrayGPU {
                 (long) 3 * Sizeof.cl_float, srcN, 0, null, null);
         clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 3 * Sizeof.cl_float,
                 (long) 5 * Sizeof.cl_float, srcR, 0, null, null);
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 8 * Sizeof.cl_float,
+                (long) Sizeof.cl_float, srcA, 0, null, null);
         clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 11 * Sizeof.cl_float,
                 (long) 3 * Sizeof.cl_float, srcB, 0, null, null);
 
@@ -280,10 +282,6 @@ public class ArrayGPU {
         for (cl_mem[] mem: memObjects.values()) {
             CL.clReleaseMemObject(mem[0]);
             CL.clReleaseMemObject(mem[1]);
-            CL.clReleaseMemObject(mem[2]);
-            CL.clReleaseMemObject(mem[3]);
-            CL.clReleaseMemObject(mem[4]);
-            CL.clReleaseMemObject(mem[5]);
         }
         CL.clReleaseMemObject(camMem);
         CL.clReleaseContext(this.context);

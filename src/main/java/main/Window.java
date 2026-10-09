@@ -22,9 +22,7 @@ public class Window extends Canvas{
         
         frame.setPreferredSize(new Dimension(width, height)); //1024x768, 1600/900\
 
-        frame.setMaximumSize(new Dimension(width, height));
-        frame.setMinimumSize(new Dimension(width, height));
-        
+        frame.setSize(new Dimension(width, height));
         
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
