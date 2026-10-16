@@ -14,8 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 import static main.Rendering.blendColor;
 
@@ -36,7 +34,6 @@ public class Camera extends gameObject {
     private volatile int[] pixelData;
     private volatile short[] pixelCount;
     private final GraphicsConfiguration CONFIG = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
-    private ExecutorService executor = Executors.newFixedThreadPool(10); // threads
 
     private float[] cameraMemory;
     private Robot robot;
@@ -138,7 +135,7 @@ public class Camera extends gameObject {
                 // If the object is a cube, it renders it
                 if (tempObject.getId() != ID.Camera) {
 
-                    Vector objFocal = tempObject.coords.subtract(this.focalPoint);
+                    Vector objFocal = this.focalPoint.subtract(tempObject.coords);
                     double scale = tempObject.getScale();
                     if (objFocal.dotProd(norm) > tempObject.bounds * 1.1) { // if the object is behind the user, it doesn't render
                         continue;
@@ -192,20 +189,20 @@ public class Camera extends gameObject {
             handler.sceneChanged = false; // waits until next tick
         }
         if (handler.sceneChanged) { // only renders if the scene has changed
-            Arrays.fill(pixelData, Color.red.getRGB());
+            Arrays.fill(pixelData, Color.white.getRGB());
             Arrays.fill(pixelCount, (short) 0);
 
             // Loops through all objects
             for (int i = 0; i < handler.object.size(); i++) {
                 gameObject tempObject = handler.object.get(i);
-                Vector objFocal = tempObject.coords.subtract(this.focalPoint);
+                Vector objFocal = this.focalPoint.subtract(tempObject.coords);
                 if (objFocal.dotProd(norm) > tempObject.bounds * 1.1) { // if the object is behind the user, it doesn't render
                     continue;
                 }
 
                 // If the object is a cube, it renders it
                 if (tempObject.getId() != ID.Camera) {
-                    Future<?> render = executor.submit(new Thread(() -> {
+                    Future<?> render = handler.executor.submit(new Thread(() -> {
 
                         // Finds the mesh
                         Point3D[] mesh = ((gameObject) tempObject).getMesh().getPoints();

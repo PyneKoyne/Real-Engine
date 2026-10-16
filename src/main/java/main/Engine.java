@@ -9,6 +9,8 @@ package main;
 
 import java.awt.*;
 import java.awt.image.BufferStrategy;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Engine extends Canvas implements Runnable{
     //Dimensions
@@ -20,6 +22,8 @@ public class Engine extends Canvas implements Runnable{
     private boolean running = false;
     private final Handler handler;
     private final Window window;
+    private ExecutorService executor = Executors.newFixedThreadPool(10); // threads
+
 
     //To start and stop the loop
     public synchronized void start(){
@@ -38,35 +42,32 @@ public class Engine extends Canvas implements Runnable{
 
     //Main Class
     public Engine(){
-        handler = new Handler();
+        //Starts the Window
+        window = new Window(WIDTH, HEIGHT, "Real Engine", this);
+        handler = new Handler(window, true, executor);
         {
             handler.gpu[0] = new ArrayGPU(); // sets the GPU integration of the handler
             handler.gpu[0].startProgram(ArrayGPU.projectionSource + ArrayGPU.collapseSource); // starts the GPU program for projection
-            handler.useGPU = true;
         }
-        
+
         // Adds KeyInputs
         this.addKeyListener(new KeyInput(handler));
-        
+
         // Mouse Wheel Listener
         this.addMouseWheelListener(e -> {
-        	int notches = e.getWheelRotation();
-        	
+            int notches = e.getWheelRotation();
+
             // Changes the focal length of the camera to zoom in and out
             for(int i = 0; i < handler.object.size(); i ++){
-            	gameObject tempObject = handler.object.get(i);
-            	if (tempObject.id == ID.Camera) {
-            		Camera camera = (Camera) tempObject;
+                gameObject tempObject = handler.object.get(i);
+                if (tempObject.id == ID.Camera) {
+                    Camera camera = (Camera) tempObject;
 
                     // Sets focal length velocity change to make it more seamless
-            		camera.setFocalVel(-0.2 * notches);
-            	}
+                    camera.setFocalVel(-0.2 * notches);
+                }
             }
         });
-        
-        //Starts the Window
-        window = new Window(WIDTH, HEIGHT, "Real Engine", this);
-        handler.window = window;
 
         Scene scene = new Scene(handler);
         scene.testScene();

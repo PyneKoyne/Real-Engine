@@ -5,6 +5,8 @@
 
 package main;
 
+import java.util.ArrayList;
+
 // Point3D class
 public class Point3D implements Cloneable {
     public double x;
@@ -80,6 +82,14 @@ public class Point3D implements Cloneable {
         this.z = z;
     }
 
+    public Point3D mul(double scalar) {
+        return new Point3D(this.x * scalar, this.y * scalar, this.z * scalar);
+    }
+
+    public Point3D add(Point3D p) {
+        return new Point3D(this.x + p.x, this.y + p.y, this.z + p.z);
+    }
+
     @Override
     public String toString() {
         return "(" + x + ", " + y + ", " + z + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
@@ -139,8 +149,13 @@ public class Point3D implements Cloneable {
 
     // Creates a Vector from one point to another point
     public Vector subtract(Point3D p) {
+        return new Vector(getX() - p.x, getY() - p.y, getZ() - p.z);
+    }
+
+    public Vector abs_subtract(Point3D p) {
         return new Vector(p.x - getX(), p.y - getY(), p.z - getZ());
     }
+
 
     // Adds a vector to a point creating another point
     public Point3D add(Vector v) {
@@ -167,7 +182,7 @@ public class Point3D implements Cloneable {
     // Maps a point onto the camera
     public Vector screenOrthoCoordinates(double focalLength, Vector norm, Quaternion rot, Point3D focalPoint, int cos, int tan) {
         final double ROTATION_LIMIT = Math.PI/2.0;
-        Vector vector2cam = focalPoint.subtract(this);
+        Vector vector2cam = this.subtract(focalPoint);
 
         double angle = vector2cam.diffAngles(norm);
         if (angle > ROTATION_LIMIT){
@@ -197,4 +212,60 @@ public class Point3D implements Cloneable {
         return new Vector(getX(), getY(), getZ());
     }
 
+    public static Point3D centroid(Point3D[] points) {
+        if (points.length == 0) {
+            return null;
+        }
+        Vector n = Vector.zero;
+        ArrayList<Vector> crosses = new ArrayList<>();
+        Point3D m = Point3D.zero;
+
+        for (Point3D p : points) {
+            m = m.add(p);
+        }
+        m = m.mul(1.0 / points.length);
+
+        Vector[] aligned = new Vector[points.length];
+        aligned[0] = points[0].subtract(m);
+
+        for (int i = 0; i < points.length - 1; i ++) {
+            aligned[i + 1] = points[i + 1].subtract(m);
+            Vector cross = aligned[i].crossProd(aligned[i + 1]);
+            crosses.add(cross);
+            n = n.add(cross);
+        }
+        crosses.add(aligned[points.length - 1].crossProd(aligned[0]));
+        n = n.add(aligned[points.length - 1].crossProd(aligned[0]));
+
+        double proj = 1;
+        Vector weight = Vector.zero;
+
+        if (Math.abs(n.x) <= Math.abs(n.z) && Math.abs(n.y) <= Math.abs(n.z)) {
+            proj = n.z;
+            for (int i = 0; i < points.length - 1; i++) {
+                weight = weight.add(aligned[i].add(aligned[i + 1]).mul((crosses.get(i).z)));
+            }
+            weight = weight.add(aligned[0].add(aligned[points.length - 1]).mul((crosses.get(points.length - 1).z)));
+        }
+        else if (Math.abs(n.x) <= Math.abs(n.y) && Math.abs(n.z) <= Math.abs(n.y)) {
+            proj = n.y;
+            for (int i = 0; i < points.length - 1; i ++) {
+                weight = weight.add(aligned[i].add(aligned[i + 1]).mul((crosses.get(i).y)));
+            }
+            weight = weight.add(aligned[0].add(aligned[points.length - 1]).mul((crosses.get(points.length - 1).y)));
+        }
+        else if (Math.abs(n.z) <= Math.abs(n.x) && Math.abs(n.y) <= Math.abs(n.x)) {
+            proj = n.x;
+            for (int i = 0; i < points.length - 1; i ++) {
+                weight = weight.add(aligned[i].add(aligned[i + 1]).mul((crosses.get(i).x)));
+            }
+            weight = weight.add(aligned[0].add(aligned[points.length - 1]).mul((crosses.get(points.length - 1).x)));
+        }
+
+        if (Math.abs(proj) < 1e-10) {
+            return m;
+        }
+
+        return m.add(weight.mul(1/(3.0 * proj)).toPoint());
+    }
 }

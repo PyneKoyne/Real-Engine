@@ -8,6 +8,9 @@ package main;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class Mesh {
 	// Variables
@@ -45,10 +48,26 @@ public class Mesh {
 	}
 
 	// Creates the total mesh by drawing each face
-	public void createMesh(double density) {
+	public void createMesh(double density, ExecutorService executor) {
+		ArrayList<Future<ArrayList<Point3D>>> renders = new ArrayList<>();
+
 		ArrayList<Point3D> temp_mesh = new ArrayList<>();
 		for (Face face : faces) {
-            temp_mesh.addAll(face.drawFace(vertices, density));
+			Callable<ArrayList<Point3D>> task;
+			if (face.length() == 4) {
+				task = () -> face.drawFace(vertices, 0.005);
+			}
+			else {
+				task = () -> face.drawTriangleFace(vertices, density);
+			}
+			renders.add(executor.submit(task));
+		}
+		for (Future<ArrayList<Point3D>> render : renders) {
+			try {
+				temp_mesh.addAll(render.get());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		System.out.println(temp_mesh.get(0));
 		Point3D[] arr = new Point3D[temp_mesh.size()];

@@ -17,7 +17,7 @@ public class Plane extends gameObject{
         super(p, rot, scale, id);
         this.handler = handler;
         Point3D[] verts = {
-                new Point3D((double) -1 /2, (double) -1/2, 0),
+                new Point3D((double) -1/2, (double) -1/2, 0),
                 new Point3D((double) 1/2, (double) -1/2, 0),
                 new Point3D((double) -1/2, (double) 1/2, 0),
                 new Point3D((double) 1/2, (double) 1/2, 0),
@@ -31,7 +31,7 @@ public class Plane extends gameObject{
         this.bounds = scale/1.414;
         this.mesh = new Mesh(verts, faceVerts);
         this.color = color;
-        mesh.createMesh(0.001);
+        mesh.createMesh(scale/0.001, handler.executor);
 
         mesh.colour_mesh = new int[mesh.points];
         Arrays.fill(mesh.colour_mesh, color.getRGB());

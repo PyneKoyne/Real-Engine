@@ -5,6 +5,8 @@
 
 package main;
 
+import java.util.ArrayList;
+
 public class Vector implements Cloneable {
 	public double x;
 	public double y;

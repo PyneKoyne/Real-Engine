@@ -7,6 +7,8 @@ package main;
 
 import java.awt.*;
 import java.util.LinkedList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 // Handler Class
 public class Handler {
@@ -16,6 +18,13 @@ public class Handler {
     public boolean useGPU = false;
     public Window window;
     public boolean sceneChanged = true;
+    public ExecutorService executor; // threads
+
+    public Handler(Window window, boolean useGPU, ExecutorService executer) {
+        this.window = window;
+        this.useGPU = useGPU;
+        this.executor = executer;
+    }
 
     // Ticks and renders every game object
     public void tick(){

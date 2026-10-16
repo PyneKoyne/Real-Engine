@@ -41,7 +41,7 @@ public class Cube extends gameObject{
         this.bounds = scale / 1.732;
         this.mesh = new Mesh(verts, faceVerts);
         this.color = color;
-        mesh.createMesh(0.01);
+        mesh.createMesh(0.01, handler.executor);
 
         mesh.colour_mesh = new int[mesh.points];
         Arrays.fill(mesh.colour_mesh, color.getRGB());

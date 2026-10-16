@@ -19,12 +19,7 @@ public class Scene {
     }
 
     public void testScene() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
-
-        String timestampStr = now.format(formatter);
-        Rendering renderer = new Rendering(handler.window.getWidth(), handler.window.getHeight(), timestampStr + ".mp4", 30);
-        this.camera = new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, renderer);
+        this.camera = new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, null);
         //Places the Camera
         handler.addObject(this.camera);
 
@@ -55,8 +50,18 @@ public class Scene {
         handler.addObject(new Plane(new Point3D(100, 166, 64), new Vector(0, Math.PI/2, 0), 128, ID.Plane, handler, Color.red));
         handler.addObject(new Plane(new Point3D(100, 358, 128), new Vector(0, Math.PI/2, 0), 256, ID.Plane, handler, Color.blue));
         handler.addObject(new Plane(new Point3D(100, 742, 256), new Vector(0, Math.PI/2, 0), 512, ID.Plane, handler, Color.black));
+    }
 
+    public void renderObjScene() {
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
-
+        String timestampStr = now.format(formatter);
+        Rendering renderer = new Rendering(handler.window.getWidth(), handler.window.getHeight(), timestampStr + ".mp4", 30);
+        this.camera = new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, renderer);
+        //Places the Camera
+        handler.addObject(this.camera);
+        OBJLoader cube = new OBJLoader("src/main/java/main/cube.obj", new Point3D(84, -20, 32), Vector.zero, 16, ID.Cube, handler);
+        handler.addObject(cube);
     }
 }
