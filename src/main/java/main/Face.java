@@ -5,6 +5,7 @@
 
 package main;
 
+import java.awt.*;
 import java.util.*;
 
 public class Face implements Cloneable {
@@ -13,10 +14,16 @@ public class Face implements Cloneable {
 	public int[] verts;
 	public Vector norm;
 	public Point3D centre;
+	public int colour;
 
 	// Constructor
 	public Face(int[] verts) {
 		this.verts = verts;
+		this.colour = Color.black.getRGB();
+	}
+	public Face(int[] verts, int colour) {
+		this.verts = verts;
+		this.colour = colour;
 	}
 
 	// Get Vert methods

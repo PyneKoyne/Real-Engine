@@ -7,6 +7,7 @@ package main;
 
 import java.awt.Point;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -21,6 +22,11 @@ public class Mesh {
 	public Point3D[] mesh;
 	public float[] rawMesh;
 	public int[] colour_mesh;
+
+	public Mesh(Point3D[] vertices, Face[] faces) {
+		this.vertices = vertices;
+		this.faces = faces;
+	}
 
 	// Defines the mesh based on the given parameters
 	public Mesh(Point3D[] vertices, int[][] faceStructure) {
@@ -52,6 +58,7 @@ public class Mesh {
 		ArrayList<Future<ArrayList<Point3D>>> renders = new ArrayList<>();
 
 		ArrayList<Point3D> temp_mesh = new ArrayList<>();
+		ArrayList<Integer> temp_colour_mesh = new ArrayList<>();
 		for (Face face : faces) {
 			Callable<ArrayList<Point3D>> task;
 			if (face.length() == 4) {
@@ -62,9 +69,13 @@ public class Mesh {
 			}
 			renders.add(executor.submit(task));
 		}
-		for (Future<ArrayList<Point3D>> render : renders) {
+		for (int i = 0; i < renders.size(); i++) {
+			Future<ArrayList<Point3D>> render = renders.get(i);
+			Face face = faces[i];
 			try {
-				temp_mesh.addAll(render.get());
+				ArrayList<Point3D> result = render.get();
+				temp_mesh.addAll(result);
+				temp_colour_mesh.addAll(Collections.nCopies(result.size(), face.colour));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -74,7 +85,7 @@ public class Mesh {
 		mesh = temp_mesh.toArray(arr);
 		points = mesh.length;
 		setRawMesh(mesh);
-		colour_mesh = new int[temp_mesh.size()];
+		colour_mesh = temp_colour_mesh.stream().mapToInt(Integer::intValue).toArray();
 	}
 
 	// sets the raw mesh and points field of the object
