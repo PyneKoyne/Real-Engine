@@ -151,7 +151,7 @@ public class Camera extends gameObject {
                             (float) new_rot.w,
                             (float) (new_rot.w * new_rot.w - (new_rot.x * new_rot.x + new_rot.y * new_rot.y + new_rot.z * new_rot.z)),
                     };
-                    gpu[0].projectVectors((float) (focal_length), focal, temp_norm.toFloat(), rot_mem, tempObject.getMesh().points / 3, tempObject.getHash()); // grabs the screen locations of all the points by sending a script to the GPU
+                    gpu[0].projectVectors((float) (focal_length), focal, (float) scale, temp_norm.toFloat(), rot_mem, tempObject.getMesh().points / 3, tempObject.getHash()); // grabs the screen locations of all the points by sending a script to the GPU
                 }
             }
             try {

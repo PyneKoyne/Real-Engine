@@ -46,8 +46,7 @@ public class Engine extends Canvas implements Runnable{
         window = new Window(WIDTH, HEIGHT, "Real Engine", this);
         handler = new Handler(window, true, executor);
         {
-            handler.gpu[0] = new ArrayGPU(); // sets the GPU integration of the handler
-            handler.gpu[0].startProgram(ArrayGPU.projectionSource + ArrayGPU.collapseSource); // starts the GPU program for projection
+            handler.gpu[0] = new ArrayGPU(true); // sets the GPU integration of the handler
         }
 
         // Adds KeyInputs

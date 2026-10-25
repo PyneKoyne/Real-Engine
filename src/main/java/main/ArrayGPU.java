@@ -13,11 +13,12 @@ import static org.jocl.CL.*;
 // ArrayGPU class to create a new ArrayGPU object. Heavily inspired by JOCL template code
 public class ArrayGPU {
     // openCL code to find where a point projects onto the scren
-    public static String projectionSource = "__kernel void " +
+    public static String projectionSource = "\n#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable\n" +
+            "__kernel void " +
             "projectionKernel(__global const float *a," +
             "             __global const float *b," +
             "             __global int *c," +
-            "             __global int *d," +
+            "             __global long *d," +
             "             __global int *e," +
             "             __global int *f," +
             "             __global int *g)" +
@@ -43,12 +44,12 @@ public class ArrayGPU {
             "}";
 
     public static String collapseSource = "__kernel void " +
-            "collapseKernel(__global int *cnt," +
+            "collapseKernel(__global long *cnt," +
+            "             __global int *out," +
+            "             int bg," +
             "             __global int *r," +
             "             __global int *g," +
-            "             __global int *b," +
-            "             __global int *out," +
-            "             int bg)" +
+            "             __global int *b)" +
             "{" +
             "    int gid = get_global_id(0);" +
             "    if (cnt[gid] == 0) { out[gid] = bg; }" +
@@ -57,11 +58,49 @@ public class ArrayGPU {
             "    }" +
             "}";
 
+    public static String opaqueSource = "\n#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable\n" +
+            "__kernel void " +
+            "opaqueKernel(__global const float *a," +
+            "             __global const float *b," +
+            "             __global int *c," +
+            "             __global ulong *d)" +
+            "{" +
+            "    int gid = get_global_id(0);" +
+            "    float x = (a[gid * 3 + 0] - b[11]);" +
+            "    float y = (a[gid * 3 + 1] - b[12]);" +
+            "    float z = (a[gid * 3 + 2] - b[13]);" +
+            "    float dot = mad(x, b[0], mad(y, b[1], z * b[2]));" +
+            "    if (dot > 0) {" + /* only draws if the point is in front of the camera */
+            "       float angle = clamp(acos(dot * native_rsqrt(mad(x, x, mad(y, y, z * z)))), -4.0, 4.0);" +
+            "       float con = 2.0 * mad(b[3], x, mad(b[4], y, b[5] * z));" +
+            "       float new_y = mad(b[4], con, mad(y, b[7], (mad(b[5], x, -b[3] * z)) * b[6] * 2.0));" +
+            "       float new_z = mad(b[5], con, mad(z, b[7], (mad(b[3], y, -b[4] * x)) * b[6] * 2.0));" +
+            "       float hyp = (angle * b[8] * 8192) * native_rsqrt(mad(new_y, new_y, new_z * new_z));" +
+            "       int loc = clamp(mad(round(mad(new_z, hyp, b[10])), b[9] * 2, clamp(round(mad(new_y, hyp, b[9])), 0.0, 2 * b[9])), 0.0, b[9] * b[10] * 4);" +
+            "       int color = c[gid];" +
+            "       ulong packed = ((ulong) as_uint(dot * b[14] * 200)) << 32 | ((uint)color);" +
+            "       atom_min(&d[loc], packed);" + /* stores the final screen location in one float */
+            "    }" +
+            "}";
+
+    public static String collapseOpaqueSource = "__kernel void " +
+            "collapseOpaqueKernel(__global ulong *cnt," +
+            "             __global int *out," +
+            "             int bg)" +
+            "{" +
+            "    int gid = get_global_id(0);" +
+            "    if (cnt[gid] >> 32 == 0xffffffff) { out[gid] = bg; }" +
+            "    else {" +
+            "       out[gid] = cnt[gid];" +
+            "    }" +
+            "}";
+
     // variables for the gpu
     private cl_context context;
     private cl_device_id device;
     private cl_kernel projection_kernel;
     private cl_kernel collapse_kernel;
+    private boolean opaque;
     private cl_command_queue commandQueue;
     private HashMap<Integer, cl_mem[]> memObjects = new HashMap<>(); // hashmaps of the game objects to be drawn
     private cl_program program;
@@ -70,7 +109,9 @@ public class ArrayGPU {
     private int set_width, set_height;
 
     // constructor which sets all the default information for the GPU
-    public ArrayGPU(){
+    public ArrayGPU(boolean opaque){
+        this.opaque = opaque;
+
         // The platform, device type and device number
         // that will be used
         final int platformIndex = 0;
@@ -117,6 +158,8 @@ public class ArrayGPU {
         // Create a command-queue for the selected device
         this.commandQueue =
                 CL.clCreateCommandQueue(this.context, device, 0, null);
+
+        startProgram(projectionSource + collapseSource + opaqueSource + collapseOpaqueSource);
     }
 
     // Creates a program based on the source code
@@ -132,11 +175,17 @@ public class ArrayGPU {
         }
 
         // Create the kernel
-        this.projection_kernel = CL.clCreateKernel(this.program, "projectionKernel", null);
-        this.collapse_kernel = CL.clCreateKernel(this.program, "collapseKernel", null);
+        if (this.opaque) {
+            this.projection_kernel = CL.clCreateKernel(this.program, "opaqueKernel", null);
+            this.collapse_kernel = CL.clCreateKernel(this.program, "collapseOpaqueKernel", null);
+        }
+        else {
+            this.projection_kernel = CL.clCreateKernel(this.program, "projectionKernel", null);
+            this.collapse_kernel = CL.clCreateKernel(this.program, "collapseKernel", null);
+        }
         this.camMem = CL.clCreateBuffer(this.context,
                 CL.CL_MEM_READ_ONLY,
-                (long) Sizeof.cl_float * 14, null, null);
+                (long) Sizeof.cl_float * 15, null, null);
     }
 
     // Returns the OpenCL compiler log for the current program (never throws)
@@ -171,7 +220,7 @@ public class ArrayGPU {
         set_height = height;
         set_width = width;
         long bytes = (long) width * height * Sizeof.cl_int;
-        cnt = CL.clCreateBuffer(this.context, CL.CL_MEM_READ_WRITE, bytes, null, null);
+        cnt = CL.clCreateBuffer(this.context, CL.CL_MEM_READ_WRITE, bytes * 2, null, null);
         r = CL.clCreateBuffer(this.context, CL.CL_MEM_READ_WRITE, bytes, null, null);
         g = CL.clCreateBuffer(this.context, CL.CL_MEM_READ_WRITE, bytes, null, null);
         b = CL.clCreateBuffer(this.context, CL.CL_MEM_READ_WRITE, bytes, null, null);
@@ -213,11 +262,12 @@ public class ArrayGPU {
     }
 
     // Executes the program based on the input received and the other stored memory objects
-    public void projectVectors(float focal_length, float[] focal, float[] norm, float[] rot, int ids, int hash) {
+    public void projectVectors(float focal_length, float[] focal, float scale, float[] norm, float[] rot, int ids, int hash) {
         Pointer srcA = Pointer.to(new float[]{focal_length});
         Pointer srcB = Pointer.to(focal);
         Pointer srcN = Pointer.to(norm);
         Pointer srcR = Pointer.to(rot);
+        Pointer srcS = Pointer.to(new float[]{scale});
 
         cl_mem[] mem = this.memObjects.get(hash);
         if(mem == null){
@@ -231,6 +281,8 @@ public class ArrayGPU {
                 (long) Sizeof.cl_float, srcA, 0, null, null);
         clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 11 * Sizeof.cl_float,
                 (long) 3 * Sizeof.cl_float, srcB, 0, null, null);
+        clEnqueueWriteBuffer(commandQueue, this.camMem, CL_TRUE, 14 * Sizeof.cl_float,
+                (long) Sizeof.cl_float, srcS, 0, null, null);
 
         // Set the arguments for the kernel
         CL.clSetKernelArg(this.projection_kernel, 0,
@@ -241,12 +293,14 @@ public class ArrayGPU {
                 Sizeof.cl_mem, Pointer.to(mem[1]));
         CL.clSetKernelArg(this.projection_kernel, 3,
                 Sizeof.cl_mem, Pointer.to(cnt));
-        CL.clSetKernelArg(this.projection_kernel, 4,
-                Sizeof.cl_mem, Pointer.to(r));
-        CL.clSetKernelArg(this.projection_kernel, 5,
-                Sizeof.cl_mem, Pointer.to(g));
-        CL.clSetKernelArg(this.projection_kernel, 6,
-                Sizeof.cl_mem, Pointer.to(b));
+        if (!opaque) {
+            CL.clSetKernelArg(this.projection_kernel, 4,
+                    Sizeof.cl_mem, Pointer.to(r));
+            CL.clSetKernelArg(this.projection_kernel, 5,
+                    Sizeof.cl_mem, Pointer.to(g));
+            CL.clSetKernelArg(this.projection_kernel, 6,
+                    Sizeof.cl_mem, Pointer.to(b));
+        }
 
         // Set the work-item dimensions
         long[] global_work_size = new long[]{ids};
@@ -257,7 +311,12 @@ public class ArrayGPU {
     }
 
     public void clearScreen(int m) {
-        clEnqueueFillBuffer(commandQueue, cnt, Pointer.to(new int[]{0}), Sizeof.cl_int, 0, (long) m * Sizeof.cl_int, 0, null, null);
+        if (opaque) {
+            clEnqueueFillBuffer(commandQueue, cnt, Pointer.to(new long[]{0xFFFFFFFFFFFFFFFFL}), Sizeof.cl_long, 0, (long) m * Sizeof.cl_long, 0, null, null);
+        }
+        else {
+            clEnqueueFillBuffer(commandQueue, cnt, Pointer.to(new long[]{0}), Sizeof.cl_long, 0, (long) m * Sizeof.cl_long, 0, null, null);
+        }
         clEnqueueFillBuffer(commandQueue, r, Pointer.to(new int[]{0}), Sizeof.cl_int, 0, (long) m * Sizeof.cl_int, 0, null, null);
         clEnqueueFillBuffer(commandQueue, g, Pointer.to(new int[]{0}), Sizeof.cl_int, 0, (long) m * Sizeof.cl_int, 0, null, null);
         clEnqueueFillBuffer(commandQueue, b, Pointer.to(new int[]{0}), Sizeof.cl_int, 0, (long) m * Sizeof.cl_int, 0, null, null);
@@ -266,11 +325,13 @@ public class ArrayGPU {
     public void collapseColours(int m, int bg, int[] pixelData) {
         Pointer pixelDataPointer = Pointer.to(pixelData);
         clSetKernelArg(collapse_kernel, 0, Sizeof.cl_mem, Pointer.to(cnt));
-        clSetKernelArg(collapse_kernel, 1, Sizeof.cl_mem, Pointer.to(r));
-        clSetKernelArg(collapse_kernel, 2, Sizeof.cl_mem, Pointer.to(g));
-        clSetKernelArg(collapse_kernel, 3, Sizeof.cl_mem, Pointer.to(b));
-        clSetKernelArg(collapse_kernel, 4, Sizeof.cl_mem, Pointer.to(out));
-        clSetKernelArg(collapse_kernel, 5, Sizeof.cl_int, Pointer.to(new int[]{bg}));
+        clSetKernelArg(collapse_kernel, 1, Sizeof.cl_mem, Pointer.to(out));
+        clSetKernelArg(collapse_kernel, 2, Sizeof.cl_int, Pointer.to(new int[]{bg}));
+        if (!opaque) {
+            clSetKernelArg(collapse_kernel, 3, Sizeof.cl_mem, Pointer.to(r));
+            clSetKernelArg(collapse_kernel, 4, Sizeof.cl_mem, Pointer.to(g));
+            clSetKernelArg(collapse_kernel, 5, Sizeof.cl_mem, Pointer.to(b));
+        }
         clEnqueueNDRangeKernel(commandQueue, collapse_kernel, 1, null, new long[]{m}, null, 0, null, null);
         clEnqueueReadBuffer(commandQueue, out, CL_TRUE, 0, (long) m * Sizeof.cl_int, pixelDataPointer, 0, null, null);
     }
