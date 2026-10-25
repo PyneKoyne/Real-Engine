@@ -61,7 +61,7 @@ public class Scene {
         this.camera = new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, renderer);
         //Places the Camera
         handler.addObject(this.camera);
-        OBJLoader cube = new OBJLoader("src/main/java/main/cube.obj", new Point3D(84, -20, 32), Vector.zero, 16, ID.Cube, handler);
+        OBJLoader cube = new OBJLoader("src/main/java/main/snekfinal1_corrected.obj", new Point3D(84, -20, 32), Vector.zero, 16, ID.Cube, handler);
         handler.addObject(cube);
     }
 }

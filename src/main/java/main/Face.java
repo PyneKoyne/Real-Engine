@@ -93,7 +93,7 @@ public class Face implements Cloneable {
 			return point_list;
 		}
 
-		for (int i = 0; i < Math.round(u.crossProd(w).mag() * 0.5 * density); i++) {
+		for (int i = 0; i < Math.max(Math.round(u.crossProd(w).mag() * 0.5 * density), 1); i++) {
 			double r1 = Math.random();
 			double r2 = Math.random();
 			if (r1 + r2 > 1) {
@@ -104,7 +104,6 @@ public class Face implements Cloneable {
 		}
 
 		for (int i = 0; i < 10; i++) {
-			System.out.println(i);
 			HashMap<Point3D, HashSet<Point3D>> delaunayPoints = generateDelaunayFromTriangle(v, point_list.toArray(new Point3D[0]));
 			ArrayList<Point3D> new_points = new ArrayList<>();
 			for (Point3D p : delaunayPoints.keySet()) {

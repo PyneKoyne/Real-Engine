@@ -69,7 +69,7 @@ public class Engine extends Canvas implements Runnable{
         });
 
         Scene scene = new Scene(handler);
-        scene.testScene();
+        scene.renderObjScene();
     }
 
     //Game Loop
