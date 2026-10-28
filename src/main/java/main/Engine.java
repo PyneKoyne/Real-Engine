@@ -22,7 +22,7 @@ public class Engine extends Canvas implements Runnable{
     private boolean running = false;
     private final Handler handler;
     private final Window window;
-    private ExecutorService executor = Executors.newFixedThreadPool(10); // threads
+    private ExecutorService executor = Executors.newFixedThreadPool(12); // threads
 
 
     //To start and stop the loop
@@ -41,12 +41,12 @@ public class Engine extends Canvas implements Runnable{
     }
 
     //Main Class
-    public Engine(){
+    public Engine(boolean useGPU, boolean opaque){
         //Starts the Window
         window = new Window(WIDTH, HEIGHT, "Real Engine", this);
-        handler = new Handler(window, true, executor);
-        {
-            handler.gpu[0] = new ArrayGPU(true); // sets the GPU integration of the handler
+        handler = new Handler(window, useGPU, opaque, executor);
+        if (useGPU){
+            handler.gpu[0] = new ArrayGPU(opaque); // sets the GPU integration of the handler
         }
 
         // Adds KeyInputs
@@ -69,7 +69,7 @@ public class Engine extends Canvas implements Runnable{
         });
 
         Scene scene = new Scene(handler);
-        scene.renderObjScene();
+        scene.testScene();
     }
 
     //Game Loop
@@ -141,10 +141,4 @@ public class Engine extends Canvas implements Runnable{
         g.dispose();
         bs.show();
     }
-
-    public static void main(){
-        new Engine();
-
-    }
-
 }

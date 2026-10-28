@@ -19,7 +19,12 @@ public class Scene {
     }
 
     public void testScene() {
-        this.camera = new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, null);
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+
+        String timestampStr = now.format(formatter);
+        Rendering renderer = new Rendering(handler.window.getWidth(), handler.window.getHeight(), timestampStr + ".mp4", 30);
+        this.camera = new Camera(new Point3D(0, 0, 0), 0.2, ID.Camera, handler, renderer);
         //Places the Camera
         handler.addObject(this.camera);
 

@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLongArray;
 
 import static main.Rendering.blendColor;
 
@@ -33,6 +34,7 @@ public class Camera extends gameObject {
     private BufferedImage bufferedImg;     // image creation
     private volatile int[] pixelData;
     private volatile short[] pixelCount;
+    private AtomicLongArray pixelDepth;
     private final GraphicsConfiguration CONFIG = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
 
     private float[] cameraMemory;
@@ -45,7 +47,6 @@ public class Camera extends gameObject {
         this.pitch = 0;
         this.focal_length = focal;
         this.handler = handler;
-        boolean useGPU = handler.useGPU;
         this.window = handler.window;
         bufferedImg = CONFIG.createCompatibleImage(window.getWidth(), window.getHeight());
         this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
@@ -54,16 +55,22 @@ public class Camera extends gameObject {
                 screenX,
                 screenY
         };
-        pixelData = ((DataBufferInt) bufferedImg.getRaster().getDataBuffer()).getData();
-        pixelCount = new short[pixelData.length];
+        this.pixelData = ((DataBufferInt) bufferedImg.getRaster().getDataBuffer()).getData();
+
         try {
             this.robot = new Robot();
         }
          catch (AWTException e) {
             e.printStackTrace();
         }
-        if (useGPU) {
+        if (handler.useGPU) {
             handler.gpu[0].setPixelData(window.getWidth(), window.getHeight());
+        }
+        else if (handler.opaque){
+            pixelDepth = new AtomicLongArray(pixelData.length);
+        }
+        else {
+            pixelCount = new short[pixelData.length];
         }
         if (renderer != null) {
             output = renderer;
@@ -183,20 +190,33 @@ public class Camera extends gameObject {
         if (bufferedImg.getHeight() != window.getHeight() || bufferedImg.getWidth() != window.getWidth()) {
             bufferedImg = CONFIG.createCompatibleImage(window.getWidth(), window.getHeight());
             pixelData = ((DataBufferInt) bufferedImg.getRaster().getDataBuffer()).getData();
-            pixelCount = new short[pixelData.length];
+            if (handler.opaque) {
+                pixelDepth = new AtomicLongArray(pixelData.length);
+            }
+            else {
+                pixelCount = new short[pixelData.length];
+            }
             this.screenX = bufferedImg.getWidth() / 2.0f; // updates the dimension variables of the screen
             this.screenY = bufferedImg.getHeight() / 2.0f;
             handler.sceneChanged = false; // waits until next tick
         }
         if (handler.sceneChanged) { // only renders if the scene has changed
-            Arrays.fill(pixelData, Color.white.getRGB());
-            Arrays.fill(pixelCount, (short) 0);
-
+            Arrays.fill(pixelData, Color.lightGray.getRGB());
+            if (handler.opaque) {
+                // Fill the atomic array using a loop
+                for (int i = 0; i < pixelDepth.length(); i++) {
+                    pixelDepth.set(i, Long.MAX_VALUE); // Set to maximum value
+                }
+            }
+            else {
+                Arrays.fill(pixelCount, (short) 0);
+            }
             // Loops through all objects
             for (int i = 0; i < handler.object.size(); i++) {
                 gameObject tempObject = handler.object.get(i);
                 Vector objFocal = this.focalPoint.subtract(tempObject.coords);
-                if (objFocal.dotProd(norm) > tempObject.bounds * 1.1) { // if the object is behind the user, it doesn't render
+                double dot = objFocal.dotProd(norm);
+                if (dot > tempObject.bounds * 1.1) { // if the object is behind the user, it doesn't render
                     continue;
                 }
 
@@ -215,16 +235,23 @@ public class Camera extends gameObject {
                         for (int p = 0; p < mesh.length; p++) {
 
                             // Calculates where on screen the point should map to
-                            Vector camPoint = mesh[p].screenOrthoCoordinates(focal_length, temp_norm, new_rot, tempObject.rot.rotateVector(objFocal, true).mul(1/tempObject.getScale()).toPoint(), cos, tan);
+                            Point3D temp_focal = tempObject.rot.rotateVector(objFocal, true).mul(1/tempObject.getScale()).toPoint();
+                            Vector camPoint = mesh[p].screenOrthoCoordinates(focal_length, temp_norm, new_rot, temp_focal, cos, tan);
                             if (camPoint != null) {
                                 int x = (int) (camPoint.getY() + screenX);
                                 int y = (int) (camPoint.getZ() + screenY);
                                 if (x > 0 && x < screenX * 2 - 2 && y > 0 && y < screenY * 2 - 2) {
                                     int color = color_mesh[p];
-                                    fillRect(pixelData, x, y, color);
-                                    fillRect(pixelData, x + 1, y, color);
-                                    fillRect(pixelData, x, y + 1, color);
-                                    fillRect(pixelData, x + 1, y + 1, color);
+                                    if (handler.opaque) {
+                                        long depthFixed = Math.clamp((long) (mesh[p].subtract(temp_focal).dotProd(temp_norm) * tempObject.getScale() * 200), 0L, 0x7FFFFFFFL);
+                                        pixelDepth.updateAndGet(x + y * this.window.getWidth(), current -> Math.min(current, depthFixed << 32 | (color & 0xFFFFFFFFL)));
+                                    }
+                                    else {
+                                        fillRect(pixelData, x, y, color);
+                                        fillRect(pixelData, x + 1, y, color);
+                                        fillRect(pixelData, x, y + 1, color);
+                                        fillRect(pixelData, x + 1, y + 1, color);
+                                    }
                                 }
                             }
                         }
@@ -239,6 +266,16 @@ public class Camera extends gameObject {
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                     return;
+                }
+            }
+            if (handler.opaque) {
+                for (int p = 0; p < pixelData.length; p++) {
+                    long depthColor = pixelDepth.get(p);
+                    if ((depthColor >> 32) == Integer.MAX_VALUE) {
+                        continue;
+                    }
+                    int color = (int) (depthColor & 0xFFFFFFFFL);
+                    pixelData[p] = color;
                 }
             }
         }

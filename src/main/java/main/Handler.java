@@ -15,14 +15,16 @@ public class Handler {
     // A list of all the gameObjects
     LinkedList<gameObject> object = new LinkedList<gameObject>();
     public ArrayGPU[] gpu = new ArrayGPU[3]; // gpu rendering accessible for the game objects
-    public boolean useGPU = false;
+    public final boolean useGPU;
+    public final boolean opaque;
     public Window window;
     public boolean sceneChanged = true;
     public ExecutorService executor; // threads
 
-    public Handler(Window window, boolean useGPU, ExecutorService executer) {
+    public Handler(Window window, boolean useGPU, boolean opaque, ExecutorService executer) {
         this.window = window;
         this.useGPU = useGPU;
+        this.opaque = opaque;
         this.executor = executer;
     }
 

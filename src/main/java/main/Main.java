@@ -23,6 +23,9 @@ public class Main extends JFrame implements ActionListener{
     // Sets default width and height of the window
     public static int x = 1366;
     public static int y = 768;
+    private boolean nativeRendering = true;
+    private boolean opacity = false;
+
     private Main(){
         //Properties
         super("Real Engine");
@@ -38,21 +41,45 @@ public class Main extends JFrame implements ActionListener{
         JLabel label4 = new JLabel("Press W A S D to move around\n");
         JLabel label5 = new JLabel("Press Shift to unlock or lock the cursor");
 
+        JRadioButton javaRenderOption = new JRadioButton("Native Rendering", true);
+        JRadioButton gpuRenderOption = new JRadioButton("Hardware Accelerated Rendering");
+
+        ButtonGroup renderOptionsGroup = new ButtonGroup();
+        renderOptionsGroup.add(javaRenderOption);
+        renderOptionsGroup.add(gpuRenderOption);
+
+        JRadioButton transparentOption = new JRadioButton("Transparent Rendering", true);
+        JRadioButton opaqueOption = new JRadioButton("Opaque Rendering");
+
+        ButtonGroup opacityOptionsGroup = new ButtonGroup();
+        opacityOptionsGroup.add(transparentOption);
+        opacityOptionsGroup.add(opaqueOption);
 
         //Start Button
-        JButton button = new JButton("Start");
-        button.addActionListener(this);
-        button.setBounds(x/2 - 110, y/2 - 15, 220, 30);
+        JButton startButton = new JButton("Start");
+        startButton.addActionListener(this);
+        startButton.setBounds(x/2 - 110, y/2 - 15, 220, 30);
 
         //Panel
         JPanel pnlButton = new JPanel();
+        pnlButton.setLayout(new BoxLayout(pnlButton, BoxLayout.X_AXIS));
         pnlButton.setBounds(x/5, y/5, 3*x/5, 3*y/5);
-        LayoutManager FlowLayout = new FlowLayout(java.awt.FlowLayout.CENTER, 550, 25);
-        setLayout(FlowLayout);
 
         //adding button
-        pnlButton.add(button);
+        pnlButton.add(javaRenderOption);
+        pnlButton.add(gpuRenderOption);
 
+        //Panel
+        JPanel opacityOptions = new JPanel();
+        opacityOptions.setLayout(new BoxLayout(opacityOptions, BoxLayout.X_AXIS));
+        opacityOptions.setBounds(x/5, y/5, 3*x/5, 3*y/5);
+
+        //adding button
+        opacityOptions.add(transparentOption);
+        opacityOptions.add(opaqueOption);
+
+        LayoutManager FlowLayout = new FlowLayout(java.awt.FlowLayout.CENTER, 550, 25);
+        setLayout(FlowLayout);
         add(label);
         add(label1);
         add(label4);
@@ -60,6 +87,8 @@ public class Main extends JFrame implements ActionListener{
         add(label3);
         add(label5);
         add(pnlButton);
+        add(opacityOptions);
+        add(startButton);
     }
 
     @Override
@@ -68,11 +97,16 @@ public class Main extends JFrame implements ActionListener{
         // Closes the window if the start button is pressed
         String name = e.getActionCommand();
 
-        if (name.equals("Start")){
-            // Starts the Engine
-            Engine.main();{
+        switch (name) {
+            case "Start" -> {
+                // Starts the Engine
+                new Engine(!nativeRendering, opacity);
+                this.dispose();
             }
-            this.dispose();
+            case "Native Rendering" -> nativeRendering = true;
+            case "Hardware Accelerated Rendering" -> nativeRendering = false;
+            case "Transparent Rendering" -> opacity = false;
+            case "Opaque Rendering" -> opacity = true;
         }
     }
 }
